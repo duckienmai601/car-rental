@@ -8,6 +8,8 @@ import {
   View,
 } from "react-native";
 import data from "./dataset/vehicles.json";
+import { auth } from "../firebase"; // Import auth từ Firebase
+import { Alert } from "react-native";
 
 const back = require("./assets/icons/left-arrow.png");
 const dots = require("./assets/icons/dots.png");
@@ -111,9 +113,21 @@ const InfoScreen = ({ route, navigation }) => {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.rentButton}>
-          <Text style={styles.rentButtonText}>Rent a Car</Text>
-        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.rentButton}
+          onPress={() => {
+            const user = auth.currentUser;
+            if (!user) {
+              Alert.alert("Authentication Required", "You must be logged in to rent a car.", [
+                { text: "OK" }
+              ]);
+              return;
+            }
+            navigation.navigate("RentDay", { vehicleId: vehicle.id });
+          }}
+        >
+        <Text style={styles.rentButtonText}>Rent a Car</Text>
+        </TouchableOpacity>;
       </View>
     </SafeAreaView>
   );

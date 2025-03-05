@@ -3,7 +3,6 @@ import { ScrollView, TextInput, TouchableOpacity } from "react-native";
 import { Image, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 const menu = require("./assets/icons/menu.png");
-const face = require("./assets/face.png");
 const magnifying_glass = require("./assets/icons/magnifying-glass.png");
 
 const image_v_1 = require("./assets/vehicles/v-1.png");
@@ -45,11 +44,7 @@ const HomeScreen = ({ navigation }) => {
             resizeMode="contain"
             style={styles.menuIconStyle}
           />
-          <Image
-            source={face}
-            resizeMode="contain"
-            style={styles.faceIconStyle}
-          />
+
         </View>
 
         <View style={styles.titleSection}>
