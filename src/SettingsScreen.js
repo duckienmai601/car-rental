@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Image, Alert } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { getAuth, onAuthStateChanged, signOut } from "firebase/auth";
 import { Ionicons } from "@expo/vector-icons";
@@ -24,38 +24,52 @@ const SettingsScreen = () => {
     }
   };
 
+  const menuItems = [
+    { icon: "notifications-outline", text: "Thông báo" },
+    { icon: "person-outline", text: "Chỉnh sửa hồ sơ" },
+    { icon: "card-outline", text: "Thanh toán" },
+    { icon: "ellipsis-horizontal-circle-outline", text: "Ngôn ngữ & Khu vực" },
+  ];
+
   return (
     <View style={styles.container}>
-      <View style={styles.card}>
-        {user ? (
-          <>
-            <Image
-              source={{
-                uri: user.photoURL
-                  ? user.photoURL
-                  : "https://cdn-icons-png.flaticon.com/512/3177/3177440.png",
-              }}
-              style={styles.avatar}
-            />
-            <Text style={styles.welcomeText}>Xin chào, {user.email}!</Text>
-            <TouchableOpacity style={styles.buttonLogout} onPress={handleLogout}>
-              <Ionicons name="log-out-outline" size={20} color="white" />
-              <Text style={styles.buttonText}>Đăng xuất</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <>
-            <Ionicons name="person-circle-outline" size={80} color="#bbb" />
-            <Text style={styles.guestText}>Bạn chưa đăng nhập</Text>
-            <TouchableOpacity
-              style={styles.buttonLogin}
-              onPress={() => navigation.navigate("Login")}
-            >
-              <Ionicons name="log-in-outline" size={20} color="white" />
-              <Text style={styles.buttonText}>Đăng nhập / Đăng ký</Text>
-            </TouchableOpacity>
-          </>
-        )}
+      {user ? (
+        <View style={styles.userInfo}>
+          <Image
+            source={{
+              uri: user.photoURL
+                ? user.photoURL
+                : "https://cdn-icons-png.flaticon.com/512/3177/3177440.png",
+            }}
+            style={styles.avatar}
+          />
+          <Text style={styles.welcomeText}>Xin chào, {user.email}!</Text>
+          <TouchableOpacity style={styles.buttonLogout} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={20} color="white" />
+            <Text style={styles.buttonText}>Đăng xuất</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.userInfo}>
+          <Ionicons name="person-circle-outline" size={80} color="#bbb" />
+          <Text style={styles.guestText}>Bạn chưa đăng nhập</Text>
+          <TouchableOpacity
+            style={styles.buttonLogin}
+            onPress={() => navigation.navigate("Login")}
+          >
+            <Ionicons name="log-in-outline" size={20} color="white" />
+            <Text style={styles.buttonText}>Đăng nhập / Đăng ký</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      <View style={styles.menuContainer}>
+        {menuItems.map((item, index) => (
+          <TouchableOpacity key={index} style={styles.menuItem} onPress={() => Alert.alert(item.text)}>
+            <Ionicons name={item.icon} size={24} color="black" style={styles.menuIcon} />
+            <Text style={styles.menuText}>{item.text}</Text>
+            <Ionicons name="chevron-forward" size={24} color="black" />
+          </TouchableOpacity>
+        ))}
       </View>
     </View>
   );
@@ -67,20 +81,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#f4f4f4",
-    justifyContent: "center",
-    alignItems: "center",
+    paddingTop: 20,
   },
-  card: {
+  userInfo: {
     backgroundColor: "white",
-    width: "85%",
     padding: 20,
-    borderRadius: 15,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
-    elevation: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
   },
   avatar: {
     width: 80,
@@ -106,10 +114,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    shadowColor: "#007bff",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
     elevation: 3,
   },
   buttonLogout: {
@@ -119,10 +123,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    shadowColor: "#ff3b30",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
     elevation: 3,
   },
   buttonText: {
@@ -130,5 +130,25 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 8,
     fontWeight: "bold",
+  },
+  menuContainer: {
+    width: "100%",
+    backgroundColor: "white",
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+  menuIcon: {
+    marginRight: 15,
+  },
+  menuText: {
+    flex: 1,
+    fontSize: 16,
+    color: "#333",
   },
 });

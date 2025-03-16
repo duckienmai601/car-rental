@@ -44,7 +44,7 @@ const InfoScreen = ({ route, navigation }) => {
               style={styles.menuIconStyle}
             />
           </TouchableOpacity>
-          <Text style={styles.HeaderText}>Detail</Text>
+          <Text style={styles.HeaderText}>Chi tiết</Text>
           <Image
             source={dots}
             resizeMode="contain"
@@ -66,7 +66,7 @@ const InfoScreen = ({ route, navigation }) => {
               {vehicle.make} {vehicle.model}
             </Text>
             <Text style={styles.price}>
-              <Text style={styles.amount}>${vehicle.price_per_day}</Text> /day
+              <Text style={styles.amount}>{vehicle.price_per_day}đ</Text> /ngày
             </Text>
           </View>
           <Text style={styles.typetranText}>
@@ -75,19 +75,19 @@ const InfoScreen = ({ route, navigation }) => {
         </View>
 
         <Text style={styles.descriptionText}>{vehicle.description}</Text>
-        <Text style={styles.propertiesText}>Properties</Text>
+        <Text style={styles.propertiesText}>Thông tin chi tiết</Text>
 
         <View style={styles.propertiesArea}>
           <View style={styles.level}>
             <Text style={styles.propertyText}>
-              Motor power:
+            Sức mạnh động cơ:
               <Text style={styles.valueText}>
                 {" "}
                 {vehicle.properties.motor_power_hp} hp
               </Text>
             </Text>
             <Text style={styles.propertyText}>
-              Engine capacity:
+              Công suất động cơ:
               <Text style={styles.valueText}>
                 {" "}
                 {vehicle.properties.engine_capacity_cc} cc
@@ -96,7 +96,7 @@ const InfoScreen = ({ route, navigation }) => {
           </View>
           <View style={styles.level}>
             <Text style={styles.propertyText}>
-              Fuel:
+            Nhiên liệu:
               <Text style={styles.valueText}>
                 {" "}
                 {vehicle.properties.fuel_type}
@@ -104,7 +104,7 @@ const InfoScreen = ({ route, navigation }) => {
             </Text>
 
             <Text style={styles.propertyText}>
-              Traction:
+              Sức kéo:
               <Text style={styles.valueText}>
                 {" "}
                 {vehicle.properties.traction}
@@ -118,15 +118,15 @@ const InfoScreen = ({ route, navigation }) => {
           onPress={() => {
             const user = auth.currentUser;
             if (!user) {
-              Alert.alert("Authentication Required", "You must be logged in to rent a car.", [
+              Alert.alert("Thông Báo", "Bạn phải đăng nhập trước khi thuê xe", [
                 { text: "OK" }
               ]);
               return;
             }
-            navigation.navigate("RentDay", { vehicleId: vehicle.id });
+            navigation.navigate("Privacy", { vehicleId: vehicle.id });
           }}
         >
-        <Text style={styles.rentButtonText}>Rent a Car</Text>
+        <Text style={styles.rentButtonText}>Thuê xe</Text>
         </TouchableOpacity>;
       </View>
     </SafeAreaView>

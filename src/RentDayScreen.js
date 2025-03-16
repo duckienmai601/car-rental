@@ -3,8 +3,9 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { useNavigation } from "@react-navigation/native";
 
-const RentDayScreen = () => {
+const RentDayScreen = ({ route }) => {
   const navigation = useNavigation();
+  const { vehicleId } = route.params; // Nhận vehicleId từ PrivacyScreen
   const [selectedDates, setSelectedDates] = useState({});
   const [fromDate, setFromDate] = useState(null);
   const [toDate, setToDate] = useState(null);
@@ -43,18 +44,18 @@ const RentDayScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerText}>Choose the period you would like to rent</Text>
+        <Text style={styles.headerText}>Chọn thời gian bạn muốn thuê!</Text>
       </View>
 
       {/* Date Range */}
       <View style={styles.dateRange}>
         <View>
-          <Text style={styles.label}>FROM</Text>
+          <Text style={styles.label}>Từ Ngày</Text>
           <Text style={styles.dateText}>{fromDate || "--/--/----"}</Text>
         </View>
         <Text style={styles.arrow}>→</Text>
         <View>
-          <Text style={styles.label}>TO</Text>
+          <Text style={styles.label}>Đến Ngày</Text>
           <Text style={styles.dateText}>{toDate || "--/--/----"}</Text>
         </View>
       </View>
@@ -74,9 +75,16 @@ const RentDayScreen = () => {
       />
 
       {/* Confirm Button */}
-      <TouchableOpacity style={styles.confirmButton} disabled={!toDate}>
-        <Text style={styles.confirmButtonText}>Confirm</Text>
-      </TouchableOpacity>
+      <TouchableOpacity
+  style={styles.confirmButton}
+  disabled={!toDate}
+  onPress={() => {
+    navigation.navigate("Checkout", {vehicleId, fromDate, toDate });
+  }}
+>
+  <Text style={styles.confirmButtonText}>Tiếp tục</Text>
+</TouchableOpacity>
+
     </View>
   );
 };

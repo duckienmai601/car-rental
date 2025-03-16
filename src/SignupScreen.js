@@ -7,8 +7,9 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../firebase";
+import { Ionicons } from "@expo/vector-icons";
 
 const SignupScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
@@ -30,29 +31,42 @@ const SignupScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <Ionicons name="arrow-back" size={24} color="black" />
+      </TouchableOpacity>
+      <Ionicons name="person-add-outline" size={60} color="black" style={styles.icon} />
       <Text style={styles.title}>Đăng Ký</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Mật khẩu"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <TextInput
-        style={styles.input}
-        placeholder="Nhập lại mật khẩu"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        secureTextEntry
-      />
+      <View style={styles.inputContainer}>
+        <Ionicons name="mail-outline" size={20} color="black" style={styles.inputIcon} />
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
+      </View>
+      <View style={styles.inputContainer}>
+        <Ionicons name="lock-closed-outline" size={20} color="black" style={styles.inputIcon} />
+        <TextInput
+          style={styles.input}
+          placeholder="Mật khẩu"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+        />
+      </View>
+      <View style={styles.inputContainer}>
+        <Ionicons name="lock-closed-outline" size={20} color="black" style={styles.inputIcon} />
+        <TextInput
+          style={styles.input}
+          placeholder="Nhập lại mật khẩu"
+          value={confirmPassword}
+          onChangeText={setConfirmPassword}
+          secureTextEntry
+        />
+      </View>
       <TouchableOpacity style={styles.button} onPress={handleSignup}>
         <Text style={styles.buttonText}>Đăng Ký</Text>
       </TouchableOpacity>
@@ -68,10 +82,18 @@ export default SignupScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f4f4f4",
+    backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
+  },
+  backButton: {
+    position: "absolute",
+    top: 40,
+    left: 20,
+  },
+  icon: {
+    marginBottom: 20,
   },
   title: {
     fontSize: 28,
@@ -79,41 +101,39 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 30,
   },
-  input: {
-    width: "100%",
-    backgroundColor: "#fff",
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f4f4f4",
     padding: 12,
     borderRadius: 10,
-    fontSize: 16,
+    width: "100%",
     marginBottom: 15,
     borderWidth: 1,
     borderColor: "#ddd",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 3,
+  },
+  inputIcon: {
+    marginRight: 10,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
   },
   button: {
     width: "100%",
-    backgroundColor: "#28a745",
+    backgroundColor: "black",
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
-    shadowColor: "#28a745",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
   },
   buttonText: {
-    color: "#fff",
+    color: "white",
     fontSize: 18,
     fontWeight: "bold",
   },
   linkText: {
     marginTop: 15,
-    color: "#007bff",
+    color: "black",
     fontSize: 16,
     fontWeight: "bold",
   },

@@ -1,26 +1,23 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-} from "react-native";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { View, Text, TextInput, TouchableOpacity, Alert, StyleSheet } from "react-native";
+import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../firebase";
 import { Ionicons } from "@expo/vector-icons";
 
-const LoginScreen = ({ navigation }) => {
+const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
-  const handleLogin = async () => {
+  const handleResetPassword = async () => {
+    if (!email) {
+      Alert.alert("Lỗi", "Vui lòng nhập email của bạn.");
+      return;
+    }
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigation.replace("Home");
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert("Thành công", "Vui lòng kiểm tra email để đặt lại mật khẩu.");
+      navigation.goBack();
     } catch (error) {
-      Alert.alert("Login Failed", error.message);
+      Alert.alert("Lỗi", error.message);
     }
   };
 
@@ -29,8 +26,9 @@ const LoginScreen = ({ navigation }) => {
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
-      <Ionicons name="person-circle-outline" size={60} color="black" style={styles.icon} />
-      <Text style={styles.title}>Đăng Nhập</Text>
+      <Ionicons name="mail-outline" size={60} color="black" style={styles.icon} />
+      <Text style={styles.title}>Quên mật khẩu</Text>
+      <Text style={styles.description}>Nhập email của bạn để nhận hướng dẫn đặt lại mật khẩu.</Text>
       <View style={styles.inputContainer}>
         <Ionicons name="mail-outline" size={20} color="black" style={styles.inputIcon} />
         <TextInput
@@ -42,31 +40,14 @@ const LoginScreen = ({ navigation }) => {
           autoCapitalize="none"
         />
       </View>
-      <View style={styles.inputContainer}>
-        <Ionicons name="lock-closed-outline" size={20} color="black" style={styles.inputIcon} />
-        <TextInput
-          style={styles.input}
-          placeholder="Mật khẩu"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
-      </View>
-      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
-        <Text style={styles.linkText}>Quên mật khẩu?</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Đăng Nhập</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
-        <Text style={styles.linkText}>Chưa có tài khoản? Đăng ký</Text>
+      <TouchableOpacity style={styles.button} onPress={handleResetPassword}>
+        <Text style={styles.buttonText}>Gửi</Text>
       </TouchableOpacity>
     </View>
   );
 };
 
-export default LoginScreen;
+export default ForgotPasswordScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -88,7 +69,13 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#333",
-    marginBottom: 30,
+    marginBottom: 10,
+  },
+  description: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 20,
   },
   inputContainer: {
     flexDirection: "row",
@@ -118,13 +105,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontSize: 18,
-    fontWeight: "bold",
-  },
-  linkText: {
-    marginBottom: 15,
-    marginTop: 15,
-    color: "black",
-    fontSize: 16,
     fontWeight: "bold",
   },
 });
