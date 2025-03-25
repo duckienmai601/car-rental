@@ -10,42 +10,71 @@ import {
   Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import data from "./dataset/vehicles.json";
 import { Ionicons } from "@expo/vector-icons";
-import { db, auth } from "../firebase"; // Import auth và db
-import { collection, addDoc } from "firebase/firestore";
-
-const image_v_1 = require("./assets/vehicles/v-1.png");
-const image_v_2 = require("./assets/vehicles/v-2.png");
-const image_v_3 = require("./assets/vehicles/v-3.png");
-const image_v_4 = require("./assets/vehicles/v-4.png");
-
-const getImage = (id) => {
-  if (id == 1) return image_v_1;
-  if (id == 2) return image_v_2;
-  if (id == 3) return image_v_3;
-  if (id == 4) return image_v_4;
-  return require("./assets/rent a car.png");
-};
+import { db, auth } from "../firebase";
+import { collection, addDoc, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 
 const ReviewSummaryScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { vehicleId, fromDate, toDate, fullName, address, phone, hasDriver, quantity, paymentMethod } = route.params;
+  const { vehicleId, fromDate, toDate, fromTime, toTime, fullName, address, phone, hasDriver, quantity, paymentMethod } = route.params;
 
-  const vehicle = data.vehicles.filter((element) => element.id == vehicleId)[0];
+  const [vehicle, setVehicle] = useState(null);
+  const [userId, setUserId] = useState(null);
 
-  if (!vehicle) {
+  useEffect(() => {
+    const fetchVehicle = async () => {
+      try {
+        const vehicleRef = doc(db, "vehicles", vehicleId);
+        const vehicleSnap = await getDoc(vehicleRef);
+        if (vehicleSnap.exists()) {
+          setVehicle({ id: vehicleSnap.id, ...vehicleSnap.data() });
+        } else {
+          Alert.alert("Lỗi", "Không tìm thấy xe!");
+        }
+      } catch (error) {
+        console.error("Error fetching vehicle:", error);
+        Alert.alert("Lỗi", "Không thể tải thông tin xe. Vui lòng thử lại.");
+      }
+    };
+
+    const fetchUserId = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          throw new Error("Người dùng chưa đăng nhập!");
+        }
+
+        const usersQuery = query(collection(db, "users"), where("email", "==", user.email));
+        const usersSnapshot = await getDocs(usersQuery);
+        if (!usersSnapshot.empty) {
+          const userData = usersSnapshot.docs[0].data();
+          setUserId(userData.id);
+        } else {
+          Alert.alert("Lỗi", "Không tìm thấy thông tin user trong hệ thống!");
+        }
+      } catch (error) {
+        console.error("Error fetching user ID:", error);
+        Alert.alert("Lỗi", "Không thể lấy thông tin user. Vui lòng thử lại.");
+      }
+    };
+
+    fetchVehicle();
+    fetchUserId();
+  }, [vehicleId]);
+
+  if (!vehicle || userId === null) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Lỗi: Không tìm thấy thông tin xe!</Text>
+        <Text style={styles.errorText}>Đang tải thông tin...</Text>
       </SafeAreaView>
     );
   }
 
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-  const numberOfDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+  const startDateTime = new Date(`${fromDate}T${fromTime}:00`);
+  const endDateTime = new Date(`${toDate}T${toTime}:00`);
+  const timeDiff = endDateTime - startDateTime;
+  const numberOfDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
 
   const formatDate = (date) => {
     const d = new Date(date);
@@ -59,43 +88,34 @@ const ReviewSummaryScreen = () => {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
-  const pricePerDay = parseFloat(vehicle.price_per_day.replace(/\./g, ""));
+  const pricePerDay = vehicle.price_per_day;
   const subtotal = pricePerDay * numberOfDays * quantity;
   const driverFee = hasDriver ? 100000 : 0;
   const tax = subtotal * 0.1;
   const total = subtotal + driverFee + tax;
 
-  const handleChangePayment = () => {
-    navigation.navigate("PaymentMethod", {
-      vehicleId,
-      fromDate,
-      toDate,
-      fullName,
-      address,
-      phone,
-      hasDriver,
-      quantity,
-      onSelect: (method) => navigation.setParams({ paymentMethod: method }),
-    });
-  };
-
   const handleContinue = async () => {
     try {
-      // Lấy userId từ người dùng hiện tại
       const user = auth.currentUser;
       if (!user) {
         throw new Error("Người dùng chưa đăng nhập!");
       }
 
-      // Chuẩn bị dữ liệu từ ReviewSummaryScreen
+      const ordersSnapshot = await getDocs(collection(db, "orders"));
+      const newOrderId = ordersSnapshot.size + 1;
+
       const orderData = {
-        userId: user.uid, // Thêm userId để liên kết với người dùng
+        id: newOrderId,
+        userId: userId,
         vehicleId,
         vehicleMake: vehicle.make,
         vehicleModel: vehicle.model,
+        image: vehicle.image,
         pricePerDay: vehicle.price_per_day,
         fromDate,
         toDate,
+        fromTime,
+        toTime,
         numberOfDays,
         fullName,
         address,
@@ -108,12 +128,11 @@ const ReviewSummaryScreen = () => {
         tax,
         total,
         orderDate: new Date().toISOString(),
+        status: "Chờ xác thực", // Thêm trường status với giá trị mặc định
       };
 
-      // Lưu dữ liệu vào collection "orders" trong Firestore
       await addDoc(collection(db, "orders"), orderData);
 
-      // Điều hướng đến OrderSuccessfulScreen sau khi lưu
       navigation.navigate("OrderSuccessful");
     } catch (error) {
       console.error("Lỗi khi lưu đơn hàng: ", error);
@@ -133,11 +152,18 @@ const ReviewSummaryScreen = () => {
           </View>
 
           <View style={styles.orderSummary}>
-            <Image source={getImage(vehicle.id)} style={styles.vehicleImage} resizeMode="contain" />
+            <Image
+              source={{ uri: vehicle.image }}
+              style={styles.vehicleImage}
+              resizeMode="contain"
+            />
             <View style={styles.orderDetails}>
-              <Text style={styles.vehicleTitle}>{vehicle.make} {vehicle.model}</Text>
-              <Text style={styles.rating}>★ 4.2 (98)</Text>
-              <Text style={styles.price}>{formatNumber(pricePerDay)}đ x {quantity}</Text>
+              <Text style={styles.vehicleTitle}>
+                {vehicle.make} {vehicle.model}
+              </Text>
+              <Text style={styles.price}>
+                {formatNumber(pricePerDay)}đ x {quantity}
+              </Text>
             </View>
           </View>
 
@@ -163,11 +189,15 @@ const ReviewSummaryScreen = () => {
             <View style={styles.rentalPeriodContainer}>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Từ ngày:</Text>
-                <Text style={styles.rentalPeriodValue}>{formatDate(fromDate)}</Text>
+                <Text style={styles.rentalPeriodValue}>
+                  {formatDate(fromDate)} - {fromTime}
+                </Text>
               </View>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Đến ngày:</Text>
-                <Text style={styles.rentalPeriodValue}>{formatDate(toDate)}</Text>
+                <Text style={styles.rentalPeriodValue}>
+                  {formatDate(toDate)} - {toTime}
+                </Text>
               </View>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Thời gian thuê:</Text>
@@ -212,15 +242,12 @@ const ReviewSummaryScreen = () => {
                 <Ionicons name="card" size={24} color="black" />
                 <Text style={styles.paymentMethodText}>{paymentMethod}</Text>
               </View>
-              <TouchableOpacity onPress={handleChangePayment} style={styles.changeButton}>
-                <Text style={styles.changeButtonText}>Thay đổi</Text>
-              </TouchableOpacity>
             </View>
           </View>
           <View style={styles.divider} />
 
           <TouchableOpacity style={styles.paymentButton} onPress={handleContinue}>
-            <Text style={styles.paymentButtonText}>Tiếp tục</Text>
+            <Text style={styles.paymentButtonText}>Đặt Xe</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -7,20 +7,60 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../firebase";
 import { Ionicons } from "@expo/vector-icons";
+import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // Hàm tạo id tăng dần cho collection "users"
+  const getNextId = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const ids = querySnapshot.docs
+        .map(doc => parseInt(doc.data().id))
+        .filter(id => !isNaN(id));
+      if (ids.length === 0) {
+        return "1";
+      }
+      const maxId = Math.max(...ids);
+      return (maxId + 1).toString();
+    } catch (error) {
+      console.error("Lỗi khi lấy ID tiếp theo:", error);
+      throw error;
+    }
+  };
+
   const handleLogin = async () => {
     try {
+      // Đăng nhập user với Firebase Authentication
       await signInWithEmailAndPassword(auth, email, password);
+
+      // Kiểm tra xem user đã tồn tại trong collection "users" hay chưa (dựa trên email)
+      const userQuery = query(collection(db, "users"), where("email", "==", email));
+      const userSnapshot = await getDocs(userQuery);
+
+      if (userSnapshot.empty) {
+        // Nếu user chưa tồn tại trong "users", tạo document mới
+        const newUserId = await getNextId();
+
+        // Lưu thông tin user vào collection "users"
+        await addDoc(collection(db, "users"), {
+          id: newUserId,
+          email: email,
+          password: password, // Cảnh báo: Lưu mật khẩu dạng plaintext không an toàn
+          role: "normal", // Thêm trường role với giá trị mặc định là "normal"
+        });
+      }
+
+      // Điều hướng đến màn hình Home
       navigation.replace("Home");
     } catch (error) {
-      Alert.alert("Login Failed", error.message);
+      console.error("Đăng nhập thất bại:", error);
+      Alert.alert("Đăng nhập thất bại", error.message);
     }
   };
 

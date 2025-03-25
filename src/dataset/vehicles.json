@@ -10,7 +10,7 @@
         "description": "Khám phá PEUGEOT SUV 3008 với thiết kế độc đáo và mã SUV sáng tạo. Thiết kế đặc trưng và nguyên bản của nó kết hợp sức mạnh và sự thanh lịch với động lực và các đường nét uyển chuyển.",
         "properties": {
           "motor_power_hp": 120,
-          "fuel_type": "Diesel",
+          "fuel_type": "Xăng",
           "engine_capacity_cc": 1560,
           "traction": "4x2"
         }
@@ -25,7 +25,7 @@
         "description": "Ford Focus, nổi tiếng với khả năng xử lý sắc bén và thiết kế biểu cảm, mang đến trải nghiệm lái xe thú vị. Đây là một chiếc hatchback đa năng vừa hiệu quả vừa thú vị khi lái.",
         "properties": {
           "motor_power_hp": 150,
-          "fuel_type": "Petrol",
+          "fuel_type": "Xăng",
           "engine_capacity_cc": 2000,
           "traction": "FWD"
         }
@@ -40,7 +40,7 @@
         "description": "Renault Megane nổi bật với những đường nét mượt mà và phong cách tinh tế. Sedan này được trang bị công nghệ tiên tiến để mang đến hành trình thoải mái và an toàn.",
         "properties": {
           "motor_power_hp": 130,
-          "fuel_type": "Hybrid",
+          "fuel_type": "Xăng",
           "engine_capacity_cc": 1400,
           "traction": "AWD"
         }
@@ -55,7 +55,7 @@
         "description": "Fiat Fiorino là một chiếc MPV nhỏ gọn cung cấp giải pháp thực tế và tiết kiệm cho việc lái xe trong thành phố và vận chuyển hàng hóa nhỏ. Kích thước nhỏ gọn của nó giúp dễ dàng di chuyển trên các con phố hẹp.",
         "properties": {
           "motor_power_hp": 95,
-          "fuel_type": "Petrol",
+          "fuel_type": "Xăng",
           "engine_capacity_cc": 1300,
           "traction": "FWD"
         }

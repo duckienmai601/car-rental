@@ -7,24 +7,59 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { auth, db } from "../firebase";
 import { Ionicons } from "@expo/vector-icons";
+import { collection, addDoc, getDocs } from "firebase/firestore";
 
 const SignupScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  // Hàm tạo id tăng dần cho collection "users"
+  const getNextId = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const ids = querySnapshot.docs
+        .map(doc => parseInt(doc.data().id))
+        .filter(id => !isNaN(id));
+      if (ids.length === 0) {
+        return "1";
+      }
+      const maxId = Math.max(...ids);
+      return (maxId + 1).toString();
+    } catch (error) {
+      console.error("Lỗi khi lấy ID tiếp theo:", error);
+      throw error;
+    }
+  };
+
   const handleSignup = async () => {
     if (password !== confirmPassword) {
       Alert.alert("Lỗi", "Mật khẩu không khớp!");
       return;
     }
+
     try {
+      // Đăng ký user với Firebase Authentication
       await createUserWithEmailAndPassword(auth, email, password);
+
+      // Lấy id tiếp theo cho user
+      const newUserId = await getNextId();
+
+      // Lưu thông tin user vào collection "users"
+      await addDoc(collection(db, "users"), {
+        id: newUserId,
+        email: email,
+        password: password, // Cảnh báo: Lưu plaintext không an toàn
+        role: "normal", // Thêm trường role với giá trị mặc định là "normal"
+      });
+
+      // Điều hướng đến màn hình Home sau khi đăng ký thành công
       navigation.replace("Home");
     } catch (error) {
+      console.error("Đăng ký thất bại:", error);
       Alert.alert("Đăng ký thất bại", error.message);
     }
   };

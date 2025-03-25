@@ -11,43 +11,63 @@ import {
   RefreshControl,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { db, auth } from "../firebase"; // Import auth và db
-import { collection, getDocs, query, where, deleteDoc, doc } from "firebase/firestore"; // Thêm deleteDoc và doc
+import { db, auth } from "../firebase";
+import { collection, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
-
-const image_v_1 = require("./assets/vehicles/v-1.png");
-const image_v_2 = require("./assets/vehicles/v-2.png");
-const image_v_3 = require("./assets/vehicles/v-3.png");
-const image_v_4 = require("./assets/vehicles/v-4.png");
-
-const getImage = (id) => {
-  if (id == 1) return image_v_1;
-  if (id == 2) return image_v_2;
-  if (id == 3) return image_v_3;
-  if (id == 4) return image_v_4;
-  return require("./assets/rent a car.png");
-};
 
 const HistoryOrderScreen = () => {
   const navigation = useNavigation();
   const [orders, setOrders] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // State để kiểm tra trạng thái đăng nhập
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userId, setUserId] = useState(null);
 
-  // Hàm tải lại dữ liệu từ Firestore
+  const fetchUserId = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        setIsLoggedIn(false);
+        setUserId(null);
+        return null;
+      }
+
+      const usersQuery = query(collection(db, "users"), where("email", "==", user.email));
+      const usersSnapshot = await getDocs(usersQuery);
+      if (!usersSnapshot.empty) {
+        const userData = usersSnapshot.docs[0].data();
+        setUserId(userData.id);
+        return userData.id;
+      } else {
+        Alert.alert("Lỗi", "Không tìm thấy thông tin user trong hệ thống!");
+        return null;
+      }
+    } catch (error) {
+      console.error("Error fetching user ID:", error);
+      Alert.alert("Lỗi", "Không thể lấy thông tin user. Vui lòng thử lại.");
+      return null;
+    }
+  };
+
   const fetchOrders = async () => {
     try {
       const user = auth.currentUser;
       if (!user) {
-        setIsLoggedIn(false); // Người dùng chưa đăng nhập
-        setOrders([]); // Xóa danh sách đơn hàng
+        setIsLoggedIn(false);
+        setOrders([]);
         return;
       }
 
-      setIsLoggedIn(true); // Người dùng đã đăng nhập
+      setIsLoggedIn(true);
+
+      const userId = await fetchUserId();
+      if (!userId) {
+        setOrders([]);
+        return;
+      }
+
       const ordersQuery = query(
         collection(db, "orders"),
-        where("userId", "==", user.uid)
+        where("userId", "==", userId)
       );
 
       const querySnapshot = await getDocs(ordersQuery);
@@ -62,26 +82,25 @@ const HistoryOrderScreen = () => {
     }
   };
 
-  // Hàm xử lý làm mới (Pull to Refresh)
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchOrders(); // Gọi lại hàm tải dữ liệu
+    await fetchOrders();
     setRefreshing(false);
   };
 
-  // Kiểm tra trạng thái đăng nhập khi màn hình được tải
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         setIsLoggedIn(true);
-        fetchOrders(); // Tải dữ liệu nếu người dùng đã đăng nhập
+        fetchOrders();
       } else {
         setIsLoggedIn(false);
-        setOrders([]); // Xóa danh sách nếu người dùng đăng xuất
+        setUserId(null);
+        setOrders([]);
       }
     });
 
-    return () => unsubscribe(); // Hủy đăng ký listener khi component unmount
+    return () => unsubscribe();
   }, []);
 
   const handleViewDetails = (order) => {
@@ -101,7 +120,8 @@ const HistoryOrderScreen = () => {
           text: "Có",
           onPress: async () => {
             try {
-              await deleteDoc(doc(db, "orders", orderId));
+              const orderRef = doc(db, "orders", orderId);
+              await deleteDoc(orderRef);
               setOrders(orders.filter((order) => order.id !== orderId));
               Alert.alert("Thành công", "Đơn hàng đã được hủy.");
             } catch (error) {
@@ -134,7 +154,11 @@ const HistoryOrderScreen = () => {
           orders.map((order) => (
             <View key={order.id} style={styles.orderItem}>
               <Image
-                source={getImage(order.vehicleId)}
+                source={
+                  order.image
+                    ? { uri: order.image }
+                    : require("./assets/rent a car.png")
+                }
                 style={styles.vehicleImage}
                 resizeMode="contain"
               />
@@ -143,7 +167,7 @@ const HistoryOrderScreen = () => {
                   {order.vehicleMake} {order.vehicleModel}
                 </Text>
                 <Text style={styles.price}>{order.total.toLocaleString("vi-VN")}đ</Text>
-                <Text style={styles.status}>Đã thuê</Text>
+                <Text style={styles.status}>{order.status}</Text>
               </View>
               <View style={styles.buttonContainer}>
                 <TouchableOpacity

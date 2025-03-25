@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -11,53 +11,60 @@ import {
   Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import data from "./dataset/vehicles.json";
-import { auth } from "../firebase";
-import { Ionicons } from "@expo/vector-icons"; // Để hiển thị biểu tượng
-
-const image_v_1 = require("./assets/vehicles/v-1.png");
-const image_v_2 = require("./assets/vehicles/v-2.png");
-const image_v_3 = require("./assets/vehicles/v-3.png");
-const image_v_4 = require("./assets/vehicles/v-4.png");
-
-const getImage = (id) => {
-  if (id == 1) return image_v_1;
-  if (id == 2) return image_v_2;
-  if (id == 3) return image_v_3;
-  if (id == 4) return image_v_4;
-  return require("./assets/rent a car.png");
-};
+import { auth, db } from "../firebase"; // Import Firestore
+import { doc, getDoc } from "firebase/firestore"; // Firestore functions
+import { Ionicons } from "@expo/vector-icons";
 
 const CheckoutScreen = ({ route }) => {
   const navigation = useNavigation();
-  const { vehicleId, fromDate, toDate } = route.params;
+  const { vehicleId, fromDate, toDate, fromTime, toTime } = route.params; // Nhận thêm fromTime và toTime
 
-  const vehicle = data.vehicles.filter((element) => element.id == vehicleId)[0];
-
+  const [vehicle, setVehicle] = useState(null); // State để lưu dữ liệu xe từ Firestore
   const [quantity, setQuantity] = useState(1);
   const [fullName, setFullName] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
-  const [hasDriver, setHasDriver] = useState(false); // Trạng thái chọn tài xế
+  const [hasDriver, setHasDriver] = useState(false);
+
+  // Lấy dữ liệu xe từ Firestore
+  useEffect(() => {
+    const fetchVehicle = async () => {
+      try {
+        const vehicleRef = doc(db, "vehicles", vehicleId);
+        const vehicleSnap = await getDoc(vehicleRef);
+        if (vehicleSnap.exists()) {
+          setVehicle({ id: vehicleSnap.id, ...vehicleSnap.data() });
+        } else {
+          Alert.alert("Lỗi", "Không tìm thấy xe!");
+        }
+      } catch (error) {
+        console.error("Error fetching vehicle:", error);
+        Alert.alert("Lỗi", "Không thể tải thông tin xe. Vui lòng thử lại.");
+      }
+    };
+
+    fetchVehicle();
+  }, [vehicleId]);
 
   if (!vehicle) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Thông báo lỗi: không tìm thấy xe!</Text>
+        <Text style={styles.errorText}>Đang tải thông tin xe...</Text>
       </SafeAreaView>
     );
   }
 
-  // Tính số ngày thuê
-  const startDate = new Date(fromDate);
-  const endDate = new Date(toDate);
-  const numberOfDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1; // +1 để tính cả ngày đầu và cuối
+  // Tính số ngày thuê (tính cả giờ)
+  const startDateTime = new Date(`${fromDate}T${fromTime}:00`);
+  const endDateTime = new Date(`${toDate}T${toTime}:00`);
+  const timeDiff = endDateTime - startDateTime; // Thời gian thuê tính bằng milliseconds
+  const numberOfDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)); // Tính số ngày thuê
 
   // Định dạng ngày tháng theo DD/MM/YYYY
   const formatDate = (date) => {
     const d = new Date(date);
     const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0"); // +1 vì getMonth() trả về 0-11
+    const month = String(d.getMonth() + 1).padStart(2, "0");
     const year = d.getFullYear();
     return `${day}/${month}/${year}`;
   };
@@ -67,14 +74,14 @@ const CheckoutScreen = ({ route }) => {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
-  // Parse price_per_day từ chuỗi thành số
-  const pricePerDay = parseFloat(vehicle.price_per_day.replace(/\./g, "")); // Chuyển "800.000" thành 800000
+  // Parse price_per_day từ Firestore (giả sử price_per_day trong Firestore là số, không phải chuỗi)
+  const pricePerDay = vehicle.price_per_day; // Firestore lưu dưới dạng số
 
   // Tính toán giá
   const subtotal = pricePerDay * numberOfDays * quantity;
-  const driverFee = hasDriver ? 100000 : 0; // Phí tài xế
-  const tax = subtotal * 0.1; // Thuế 10% giá xe
-  const total = subtotal + driverFee + tax; // Tổng cộng
+  const driverFee = hasDriver ? 100000 : 0;
+  const tax = subtotal * 0.1;
+  const total = subtotal + driverFee + tax;
 
   const updateQuantity = (value) => {
     setQuantity((prev) => Math.max(1, prev + value));
@@ -98,6 +105,8 @@ const CheckoutScreen = ({ route }) => {
       vehicleId,
       fromDate,
       toDate,
+      fromTime,
+      toTime,
       fullName,
       address,
       phone,
@@ -147,19 +156,17 @@ const CheckoutScreen = ({ route }) => {
           <View style={styles.orderSection}>
             <Text style={styles.sectionTitle}>Chi tiết đặt hàng</Text>
             <View style={styles.orderItem}>
-              <Image source={getImage(vehicle.id)} style={styles.vehicleImage} resizeMode="contain" />
+              <Image
+                source={{ uri: vehicle.image }} // Hiển thị ảnh base64 từ Firestore
+                style={styles.vehicleImage}
+                resizeMode="contain"
+              />
               <View style={styles.details}>
-                <Text style={styles.vehicleTitle}>{vehicle.make} {vehicle.model}</Text>
-                <Text style={styles.price}>{vehicle.price_per_day}đ /ngày</Text>
-                <View style={styles.quantitySection}>
-                  <TouchableOpacity onPress={() => updateQuantity(-1)} style={styles.quantityButton}>
-                    <Text style={styles.quantityText}>-</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.quantity}>{quantity}</Text>
-                  <TouchableOpacity onPress={() => updateQuantity(1)} style={styles.quantityButton}>
-                    <Text style={styles.quantityText}>+</Text>
-                  </TouchableOpacity>
-                </View>
+                <Text style={styles.vehicleTitle}>
+                  {vehicle.make} {vehicle.model}
+                </Text>
+                <Text style={styles.price}>{formatNumber(vehicle.price_per_day)}đ /ngày</Text>
+                <View style={styles.quantitySection}></View>
               </View>
             </View>
           </View>
@@ -171,11 +178,15 @@ const CheckoutScreen = ({ route }) => {
             <View style={styles.rentalPeriodContainer}>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Từ ngày:</Text>
-                <Text style={styles.rentalPeriodValue}>{formatDate(fromDate)}</Text>
+                <Text style={styles.rentalPeriodValue}>
+                  {formatDate(fromDate)} - {fromTime}
+                </Text>
               </View>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Đến ngày:</Text>
-                <Text style={styles.rentalPeriodValue}>{formatDate(toDate)}</Text>
+                <Text style={styles.rentalPeriodValue}>
+                  {formatDate(toDate)} - {toTime}
+                </Text>
               </View>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Thời gian thuê:</Text>
@@ -244,7 +255,6 @@ const CheckoutScreen = ({ route }) => {
   );
 };
 
-export default CheckoutScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
@@ -298,23 +308,23 @@ const styles = StyleSheet.create({
   // Rental Period
   rentalPeriodSection: { marginBottom: 20 },
   rentalPeriodContainer: {
-    backgroundColor: "#f9f9f9", // Background giống Order Details
+    backgroundColor: "#f9f9f9",
     borderRadius: 10,
-    padding: 15, // Tăng padding để rộng rãi hơn
+    padding: 15,
   },
   rentalPeriodRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 10, // Khoảng cách giữa các dòng
+    marginBottom: 10,
   },
   rentalPeriodLabel: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#C3002F", // Màu đỏ đậm để tạo điểm nhấn
+    color: "#C3002F",
   },
   rentalPeriodValue: {
     fontSize: 16,
-    color: "#555", // Màu xám giống các giá trị khác
+    color: "#555",
   },
 
   // Choose Driver
@@ -371,3 +381,5 @@ const styles = StyleSheet.create({
   // Error Text
   errorText: { fontSize: 18, textAlign: "center", color: "red", marginTop: 50 },
 });
+
+export default CheckoutScreen;

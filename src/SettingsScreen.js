@@ -89,6 +89,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: "#ddd",
+    paddingTop: 120,
   },
   avatar: {
     width: 80,

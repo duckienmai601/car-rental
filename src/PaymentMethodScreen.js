@@ -18,7 +18,7 @@ const PaymentMethodScreen = () => {
 
   const paymentMethods = [
     { id: "cash", name: "Tiền mặt", icon: "cash-outline" },
-    { id: "zalopay", name: "ZaloPay", icon: "chatbubble-ellipses-outline" },
+    { id: "QR Code", name: "Mã QR", icon: "chatbubble-ellipses-outline" },
   ];
 
   const handleSelectMethod = (methodId) => {
@@ -32,13 +32,15 @@ const PaymentMethodScreen = () => {
     }
 
     // Lấy tất cả thông tin từ params và thêm paymentMethod
-    const { vehicleId, fromDate, toDate, fullName, address, phone, hasDriver, quantity } = route.params;
+    const { vehicleId, fromDate, toDate,fromTime,toTime, fullName, address, phone, hasDriver, quantity } = route.params;
     const paymentMethod = paymentMethods.find((method) => method.id === selectedMethod).name;
 
     navigation.navigate("ReviewSummary", {
       vehicleId,
       fromDate,
       toDate,
+      fromTime,
+      toTime,
       fullName,
       address,
       phone,

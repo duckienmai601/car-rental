@@ -11,19 +11,6 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 
-const image_v_1 = require("./assets/vehicles/v-1.png");
-const image_v_2 = require("./assets/vehicles/v-2.png");
-const image_v_3 = require("./assets/vehicles/v-3.png");
-const image_v_4 = require("./assets/vehicles/v-4.png");
-
-const getImage = (id) => {
-  if (id == 1) return image_v_1;
-  if (id == 2) return image_v_2;
-  if (id == 3) return image_v_3;
-  if (id == 4) return image_v_4;
-  return require("./assets/rent a car.png");
-};
-
 const OrderDetailsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
@@ -41,8 +28,6 @@ const OrderDetailsScreen = () => {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
-  
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -55,11 +40,22 @@ const OrderDetailsScreen = () => {
           </View>
 
           <View style={styles.orderSummary}>
-            <Image source={getImage(order.vehicleId)} style={styles.vehicleImage} resizeMode="contain" />
+            <Image
+              source={
+                order.image
+                  ? { uri: order.image } // Hiển thị ảnh base64 từ Firestore
+                  : require("./assets/rent a car.png") // Ảnh mặc định nếu không có
+              }
+              style={styles.vehicleImage}
+              resizeMode="contain"
+            />
             <View style={styles.orderDetails}>
-              <Text style={styles.vehicleTitle}>{order.vehicleMake} {order.vehicleModel}</Text>
-              <Text style={styles.rating}>★ 4.2 (98)</Text>
-              <Text style={styles.price}>{formatNumber(order.pricePerDay)}đ x {order.quantity}</Text>
+              <Text style={styles.vehicleTitle}>
+                {order.vehicleMake} {order.vehicleModel}
+              </Text>
+              <Text style={styles.price}>
+                {formatNumber(order.pricePerDay)}đ x {order.quantity}
+              </Text>
             </View>
           </View>
 
@@ -85,11 +81,15 @@ const OrderDetailsScreen = () => {
             <View style={styles.rentalPeriodContainer}>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Từ ngày:</Text>
-                <Text style={styles.rentalPeriodValue}>{formatDate(order.fromDate)}</Text>
+                <Text style={styles.rentalPeriodValue}>
+                  {formatDate(order.fromDate)} - {order.fromTime}
+                </Text>
               </View>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Đến ngày:</Text>
-                <Text style={styles.rentalPeriodValue}>{formatDate(order.toDate)}</Text>
+                <Text style={styles.rentalPeriodValue}>
+                  {formatDate(order.toDate)} - {order.toTime}
+                </Text>
               </View>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Thời gian thuê:</Text>
@@ -134,7 +134,6 @@ const OrderDetailsScreen = () => {
                 <Ionicons name="card" size={24} color="black" />
                 <Text style={styles.paymentMethodText}>{order.paymentMethod}</Text>
               </View>
-              
             </View>
           </View>
           <View style={styles.divider} />

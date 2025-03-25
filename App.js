@@ -18,6 +18,7 @@ import PaymentMethodScreen from "./src/PaymentMethodScreen";
 import ReviewSummaryScreen from "./src/ReviewSummaryScreen";
 import OrderSuccessfulScreen from "./src/OrderSuccessfulScreen";
 import OrderDetailsScreen from "./src/OrderDetailScreen";
+import NotifyScreen from "./src/NotifyScreen";
 
 
 
@@ -94,6 +95,7 @@ export default function App() {
         <Stack.Screen name="ReviewSummary" component={ReviewSummaryScreen} />
         <Stack.Screen name="OrderSuccessful" component={OrderSuccessfulScreen} />
         <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />
+        <Stack.Screen name="Notify" component={NotifyScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

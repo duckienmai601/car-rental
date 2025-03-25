@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Image,
   SafeAreaView,
@@ -7,28 +7,69 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import data from "./dataset/vehicles.json";
-import { auth } from "../firebase"; // Import auth từ Firebase
+import { auth } from "../firebase";
+import { db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { Alert } from "react-native";
 
+// Import biểu tượng tĩnh
 const back = require("./assets/icons/left-arrow.png");
-const dots = require("./assets/icons/dots.png");
-
-const image_v_1 = require("./assets/vehicles/v-1.png");
-const image_v_2 = require("./assets/vehicles/v-2.png");
-const image_v_3 = require("./assets/vehicles/v-3.png");
-const image_v_4 = require("./assets/vehicles/v-4.png");
 
 const InfoScreen = ({ route, navigation }) => {
-  const vehicle = data.vehicles.filter(
-    (element) => element.id == route.params.id
-  )[0];
-  const getImage = (id) => {
-    if (id == 1) return image_v_1;
-    if (id == 2) return image_v_2;
-    if (id == 3) return image_v_3;
-    if (id == 4) return image_v_4;
+  const [vehicle, setVehicle] = useState(null);
+
+  // Hàm lấy ảnh dựa trên base64 string
+  const getImage = (imageData) => {
+    if (typeof imageData === "string" && imageData.startsWith("data:image")) {
+      return { uri: imageData };
+    } else {
+      console.log("Invalid image data in InfoScreen:", imageData); // Log để debug
+      return require("./assets/icons/compass-active.png"); // Ảnh mặc định
+    }
   };
+
+  // Lấy dữ liệu xe từ Firestore dựa trên id
+  useEffect(() => {
+    const fetchVehicle = async () => {
+      // Kiểm tra route.params.id có tồn tại không
+      if (!route.params || !route.params.id) {
+        console.log("Missing route.params.id:", route.params);
+        Alert.alert("Lỗi", "Không tìm thấy ID xe. Vui lòng thử lại.");
+        navigation.goBack();
+        return;
+      }
+
+      try {
+        const vehicleRef = doc(db, "vehicles", route.params.id.toString());
+        const vehicleSnap = await getDoc(vehicleRef);
+
+        if (vehicleSnap.exists()) {
+          setVehicle({ id: vehicleSnap.id, ...vehicleSnap.data() });
+        } else {
+          console.log("Không tìm thấy xe với id:", route.params.id);
+          Alert.alert("Lỗi", "Không tìm thấy thông tin xe.");
+          navigation.goBack();
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu từ Firestore:", error);
+        Alert.alert("Lỗi", "Không thể lấy thông tin xe: " + error.message);
+        navigation.goBack();
+      }
+    };
+
+    fetchVehicle();
+  }, [route.params, navigation]);
+
+  // Nếu vehicle chưa được tải, hiển thị loading
+  if (!vehicle) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <Text>Đang tải...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -45,16 +86,12 @@ const InfoScreen = ({ route, navigation }) => {
             />
           </TouchableOpacity>
           <Text style={styles.HeaderText}>Chi tiết</Text>
-          <Image
-            source={dots}
-            resizeMode="contain"
-            style={styles.faceIconStyle}
-          />
+          <View style={styles.placeholder} />
         </View>
 
         <View style={styles.imageSection}>
           <Image
-            source={getImage(vehicle.id)}
+            source={getImage(vehicle.image)}
             resizeMode="contain"
             style={styles.vehicleImage}
           />
@@ -80,35 +117,26 @@ const InfoScreen = ({ route, navigation }) => {
         <View style={styles.propertiesArea}>
           <View style={styles.level}>
             <Text style={styles.propertyText}>
-            Sức mạnh động cơ:
+              <Text style={styles.labelText}>Sức mạnh động cơ: </Text>
               <Text style={styles.valueText}>
-                {" "}
                 {vehicle.properties.motor_power_hp} hp
               </Text>
             </Text>
             <Text style={styles.propertyText}>
-              Công suất động cơ:
+              <Text style={styles.labelText}>Công suất động cơ: </Text>
               <Text style={styles.valueText}>
-                {" "}
                 {vehicle.properties.engine_capacity_cc} cc
               </Text>
             </Text>
           </View>
           <View style={styles.level}>
             <Text style={styles.propertyText}>
-            Nhiên liệu:
-              <Text style={styles.valueText}>
-                {" "}
-                {vehicle.properties.fuel_type}
-              </Text>
+              <Text style={styles.labelText}>Nhiên liệu: </Text>
+              <Text style={styles.valueText}>{vehicle.properties.fuel_type}</Text>
             </Text>
-
             <Text style={styles.propertyText}>
-              Sức kéo:
-              <Text style={styles.valueText}>
-                {" "}
-                {vehicle.properties.traction}
-              </Text>
+              <Text style={styles.labelText}>Sức kéo: </Text>
+              <Text style={styles.valueText}>{vehicle.properties.traction}</Text>
             </Text>
           </View>
         </View>
@@ -119,15 +147,15 @@ const InfoScreen = ({ route, navigation }) => {
             const user = auth.currentUser;
             if (!user) {
               Alert.alert("Thông Báo", "Bạn phải đăng nhập trước khi thuê xe", [
-                { text: "OK" }
+                { text: "OK" },
               ]);
               return;
             }
             navigation.navigate("Privacy", { vehicleId: vehicle.id });
           }}
         >
-        <Text style={styles.rentButtonText}>Thuê xe</Text>
-        </TouchableOpacity>;
+          <Text style={styles.rentButtonText}>Thuê xe</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -148,21 +176,21 @@ const styles = StyleSheet.create({
   headerSection: {
     height: 70,
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
   },
   menuIconStyle: {
     width: 25,
   },
   HeaderText: {
     fontSize: 20,
-    marginLeft: 5,
     fontWeight: "500",
+    flex: 1,
+    textAlign: "center",
   },
-  faceIconStyle: {
-    width: 30,
+  placeholder: {
+    width: 25,
   },
-
   imageSection: {
     width: "100%",
     height: 250,
@@ -173,7 +201,6 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
   },
-
   headSection: {},
   topTextArea: {
     flexDirection: "row",
@@ -219,6 +246,10 @@ const styles = StyleSheet.create({
   propertyText: {
     fontSize: 12,
     color: "#696969",
+    marginBottom: 5,
+  },
+  labelText: {
+    color: "#696969",
   },
   valueText: {
     fontSize: 12,
@@ -227,7 +258,6 @@ const styles = StyleSheet.create({
   rentButton: {
     marginTop: 50,
     height: 40,
-    // padding: 10,
     alignSelf: "center",
     width: 250,
     backgroundColor: "black",
