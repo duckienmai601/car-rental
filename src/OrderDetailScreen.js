@@ -123,19 +123,42 @@ const OrderDetailsScreen = () => {
           </View>
           <View style={styles.divider} />
 
-          <View style={styles.driverSection}>
+                    <View style={styles.driverSection}>
             <Text style={styles.sectionTitle}>Lựa chọn Tài xế</Text>
-            {order?.hasDriver && order?.driverId && driver ? (
-              <View>
-                <Text style={styles.driverText}>Có</Text>
-                <Text style={styles.driverText}>Tên Tài Xế: {driver.name}</Text>
-                <Text style={styles.driverText}>Số Điện Thoại: {driver.phone}</Text>
-              </View>
-            ) : order?.hasDriver ? (
-              <Text style={styles.driverText}>Hiện đã hết tài xế</Text>
-            ) : (
-              <Text style={styles.driverText}>Không</Text>
-            )}
+            <View style={styles.driverCard}>
+              {order?.hasDriver && order?.driverId && driver ? (
+                <View style={styles.driverInfo}>
+                  <View style={styles.driverStatusRow}>
+                    <Ionicons name="checkmark-circle" size={20} color="#28a745" style={styles.driverIcon} />
+                    <Text style={[styles.driverText, styles.driverStatus, { color: "#28a745" }]}>Có</Text>
+                  </View>
+                  <View style={styles.driverDetailRow}>
+                    <Ionicons name="person" size={18} color="#555" style={styles.driverDetailIcon} />
+                    <Text style={styles.driverDetailText}>Tên Tài Xế: {driver.name}</Text>
+                  </View>
+                  <View style={styles.driverDetailRow}>
+                    <Ionicons name="call" size={18} color="#555" style={styles.driverDetailIcon} />
+                    <Text style={styles.driverDetailText}>Số Điện Thoại: {driver.phone}</Text>
+                  </View>
+                </View>
+              ) : order?.hasDriver ? (
+                <View style={styles.driverInfo}>
+                  <View style={styles.driverStatusRow}>
+                    <Ionicons name="warning" size={20} color="#f1c40f" style={styles.driverIcon} />
+                    <Text style={[styles.driverText, styles.driverStatus, { color: "#f1c40f" }]}>
+                      Hiện đã hết tài xế
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={styles.driverInfo}>
+                  <View style={styles.driverStatusRow}>
+                    <Ionicons name="close-circle" size={20} color="#dc3545" style={styles.driverIcon} />
+                    <Text style={[styles.driverText, styles.driverStatus, { color: "#dc3545" }]}>Không</Text>
+                  </View>
+                </View>
+              )}
+            </View>
           </View>
           <View style={styles.divider} />
 
@@ -228,6 +251,45 @@ const styles = StyleSheet.create({
   rentalPeriodLabel: { fontSize: 16, fontWeight: "bold", color: "#C3002F" },
   rentalPeriodValue: { fontSize: 16, color: "#555" },
   driverSection: { marginBottom: 20 },
+  driverCard: {
+    backgroundColor: "#f9f9f9",
+    borderRadius: 10,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  driverInfo: {
+    flexDirection: "column",
+  },
+  driverStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  driverIcon: {
+    marginRight: 8,
+  },
+  driverStatus: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  driverDetailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  driverDetailIcon: {
+    marginRight: 8,
+  },
+  driverDetailText: {
+    fontSize: 14,
+    color: "#333",
+  },
   driverText: { fontSize: 16, color: "#000", marginBottom: 5 },
   priceBreakdown: { marginBottom: 20 },
   priceRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },

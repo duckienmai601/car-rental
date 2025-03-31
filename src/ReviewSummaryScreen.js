@@ -70,7 +70,7 @@ const ReviewSummaryScreen = () => {
         const driversSnapshot = await getDocs(collection(db, "taxiDrivers"));
         const availableDrivers = driversSnapshot.docs
           .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(driver => driver.isAvailable); // Giả sử có trường isAvailable
+          .filter(driver => driver.status === "available"); // Tìm tài xế có status là "available"
 
         if (availableDrivers.length > 0) {
           setDriverId(availableDrivers[0].id); // Chọn tài xế đầu tiên sẵn sàng
@@ -365,4 +365,3 @@ const styles = StyleSheet.create({
   paymentButtonText: { color: "white", fontSize: 16, fontWeight: "bold" },
   errorText: { fontSize: 18, textAlign: "center", color: "red", marginTop: 50 },
 });
-
