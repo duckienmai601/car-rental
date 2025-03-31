@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   SafeAreaView,
   ScrollView,
@@ -10,11 +10,35 @@ import {
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
+import { db } from "../firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 const OrderDetailsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { order } = route.params; // Lấy dữ liệu đơn hàng từ params
+  const [driver, setDriver] = useState(null); // State để lưu thông tin tài xế
+
+  // Lấy thông tin tài xế từ Firestore dựa trên driverId nếu hasDriver là true
+  useEffect(() => {
+    const fetchDriver = async () => {
+      try {
+        if (order?.hasDriver && order?.driverId) {
+          const driverRef = doc(db, "taxiDrivers", order.driverId);
+          const driverSnap = await getDoc(driverRef);
+          if (driverSnap.exists()) {
+            setDriver(driverSnap.data()); // Lưu thông tin tài xế (name, phone)
+          } else {
+            console.warn("Tài xế không tồn tại:", order.driverId);
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy thông tin tài xế:", error);
+      }
+    };
+
+    fetchDriver();
+  }, [order?.hasDriver, order?.driverId]);
 
   const formatDate = (date) => {
     const d = new Date(date);
@@ -42,7 +66,7 @@ const OrderDetailsScreen = () => {
           <View style={styles.orderSummary}>
             <Image
               source={
-                order.image
+                order?.image
                   ? { uri: order.image } // Hiển thị ảnh base64 từ Firestore
                   : require("./assets/rent a car.png") // Ảnh mặc định nếu không có
               }
@@ -51,10 +75,10 @@ const OrderDetailsScreen = () => {
             />
             <View style={styles.orderDetails}>
               <Text style={styles.vehicleTitle}>
-                {order.vehicleMake} {order.vehicleModel}
+                {order?.vehicleMake} {order?.vehicleModel}
               </Text>
               <Text style={styles.price}>
-                {formatNumber(order.pricePerDay)}đ x {order.quantity}
+                {formatNumber(order?.pricePerDay || 0)}đ x {order?.quantity || 0}
               </Text>
             </View>
           </View>
@@ -63,15 +87,15 @@ const OrderDetailsScreen = () => {
             <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
             <View style={styles.addressItem}>
               <Text style={styles.addressLabel}>Tên:</Text>
-              <Text style={styles.addressValue}>{order.fullName}</Text>
+              <Text style={styles.addressValue}>{order?.fullName || "N/A"}</Text>
             </View>
             <View style={styles.addressItem}>
               <Text style={styles.addressLabel}>Địa chỉ:</Text>
-              <Text style={styles.addressValue}>{order.address}</Text>
+              <Text style={styles.addressValue}>{order?.address || "N/A"}</Text>
             </View>
             <View style={styles.addressItem}>
               <Text style={styles.addressLabel}>Số điện thoại:</Text>
-              <Text style={styles.addressValue}>{order.phone}</Text>
+              <Text style={styles.addressValue}>{order?.phone || "N/A"}</Text>
             </View>
           </View>
           <View style={styles.divider} />
@@ -82,18 +106,18 @@ const OrderDetailsScreen = () => {
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Từ ngày:</Text>
                 <Text style={styles.rentalPeriodValue}>
-                  {formatDate(order.fromDate)} - {order.fromTime}
+                  {order?.fromDate ? formatDate(order.fromDate) : "N/A"} - {order?.fromTime || "N/A"}
                 </Text>
               </View>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Đến ngày:</Text>
                 <Text style={styles.rentalPeriodValue}>
-                  {formatDate(order.toDate)} - {order.toTime}
+                  {order?.toDate ? formatDate(order.toDate) : "N/A"} - {order?.toTime || "N/A"}
                 </Text>
               </View>
               <View style={styles.rentalPeriodRow}>
                 <Text style={styles.rentalPeriodLabel}>Thời gian thuê:</Text>
-                <Text style={styles.rentalPeriodValue}>{order.numberOfDays} ngày</Text>
+                <Text style={styles.rentalPeriodValue}>{order?.numberOfDays || 0} ngày</Text>
               </View>
             </View>
           </View>
@@ -101,28 +125,38 @@ const OrderDetailsScreen = () => {
 
           <View style={styles.driverSection}>
             <Text style={styles.sectionTitle}>Lựa chọn Tài xế</Text>
-            <Text style={styles.driverText}>{order.hasDriver ? "Có" : "Không"}</Text>
+            {order?.hasDriver && order?.driverId && driver ? (
+              <View>
+                <Text style={styles.driverText}>Có</Text>
+                <Text style={styles.driverText}>Tên Tài Xế: {driver.name}</Text>
+                <Text style={styles.driverText}>Số Điện Thoại: {driver.phone}</Text>
+              </View>
+            ) : order?.hasDriver ? (
+              <Text style={styles.driverText}>Hiện đã hết tài xế</Text>
+            ) : (
+              <Text style={styles.driverText}>Không</Text>
+            )}
           </View>
           <View style={styles.divider} />
 
           <View style={styles.priceBreakdown}>
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Số tiền</Text>
-              <Text style={styles.priceValue}>{formatNumber(order.subtotal)}đ</Text>
+              <Text style={styles.priceValue}>{formatNumber(order?.subtotal || 0)}đ</Text>
             </View>
-            {order.hasDriver && (
+            {order?.hasDriver && (
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>Phí Tài xế</Text>
-                <Text style={styles.priceValue}>{formatNumber(order.driverFee)}đ</Text>
+                <Text style={styles.priceValue}>{formatNumber(order?.driverFee || 0)}đ</Text>
               </View>
             )}
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>Thuế (10%)</Text>
-              <Text style={styles.priceValue}>{formatNumber(order.tax)}đ</Text>
+              <Text style={styles.priceValue}>{formatNumber(order?.tax || 0)}đ</Text>
             </View>
             <View style={[styles.priceRow, styles.totalRow]}>
               <Text style={[styles.priceLabel, styles.totalLabel]}>Tổng cộng:</Text>
-              <Text style={[styles.priceValue, styles.totalValue]}>{formatNumber(order.total)}đ</Text>
+              <Text style={[styles.priceValue, styles.totalValue]}>{formatNumber(order?.total || 0)}đ</Text>
             </View>
           </View>
           <View style={styles.divider} />
@@ -132,7 +166,7 @@ const OrderDetailsScreen = () => {
             <View style={styles.paymentMethodRow}>
               <View style={styles.paymentMethodInfo}>
                 <Ionicons name="card" size={24} color="black" />
-                <Text style={styles.paymentMethodText}>{order.paymentMethod}</Text>
+                <Text style={styles.paymentMethodText}>{order?.paymentMethod || "N/A"}</Text>
               </View>
             </View>
           </View>
@@ -194,7 +228,7 @@ const styles = StyleSheet.create({
   rentalPeriodLabel: { fontSize: 16, fontWeight: "bold", color: "#C3002F" },
   rentalPeriodValue: { fontSize: 16, color: "#555" },
   driverSection: { marginBottom: 20 },
-  driverText: { fontSize: 16, color: "#000" },
+  driverText: { fontSize: 16, color: "#000", marginBottom: 5 },
   priceBreakdown: { marginBottom: 20 },
   priceRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 15 },
   totalRow: { borderTopWidth: 1, borderTopColor: "#ccc", paddingTop: 10, marginTop: 10 },
@@ -216,3 +250,4 @@ const styles = StyleSheet.create({
   changeButton: { backgroundColor: "#ddd", paddingVertical: 5, paddingHorizontal: 10, borderRadius: 5 },
   changeButtonText: { fontSize: 14, color: "#000", fontWeight: "bold" },
 });
+

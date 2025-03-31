@@ -27,9 +27,21 @@ const SettingsScreen = () => {
   const menuItems = [
     { icon: "notifications-outline", text: "Thông báo" },
     { icon: "person-outline", text: "Chỉnh sửa hồ sơ" },
-    { icon: "card-outline", text: "Thanh toán" },
     { icon: "ellipsis-horizontal-circle-outline", text: "Ngôn ngữ & Khu vực" },
+    { icon: "help-circle-outline", text: "Trợ giúp" },
+    { icon: "shield-checkmark-outline", text: "Điều khoản & Quyền riêng tư" },
+    { icon: "star-outline", text: "Đánh giá ứng dụng" },
+    { icon: "information-circle-outline", text: "Giới thiệu" },
   ];
+
+  // Hàm xử lý khi nhấn vào menu item
+  const handleMenuItemPress = (itemText) => {
+    if (itemText === "Thông báo") {
+      navigation.navigate("Notify");
+    } else {
+      Alert.alert(itemText);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -64,7 +76,8 @@ const SettingsScreen = () => {
       )}
       <View style={styles.menuContainer}>
         {menuItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem} onPress={() => Alert.alert(item.text)}>
+          <TouchableOpacity key={index} style={styles.menuItem} 
+          onPress={() => handleMenuItemPress(item.text)}>
             <Ionicons name={item.icon} size={24} color="black" style={styles.menuIcon} />
             <Text style={styles.menuText}>{item.text}</Text>
             <Ionicons name="chevron-forward" size={24} color="black" />

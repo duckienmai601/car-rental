@@ -21,6 +21,7 @@ const ReviewSummaryScreen = () => {
 
   const [vehicle, setVehicle] = useState(null);
   const [userId, setUserId] = useState(null);
+  const [driverId, setDriverId] = useState(null); // State để lưu driverId
 
   useEffect(() => {
     const fetchVehicle = async () => {
@@ -59,9 +60,35 @@ const ReviewSummaryScreen = () => {
       }
     };
 
+    const fetchDriver = async () => {
+      if (!hasDriver) {
+        setDriverId(null); // Nếu không chọn tài xế, đặt driverId là null
+        return;
+      }
+
+      try {
+        const driversSnapshot = await getDocs(collection(db, "taxiDrivers"));
+        const availableDrivers = driversSnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(driver => driver.isAvailable); // Giả sử có trường isAvailable
+
+        if (availableDrivers.length > 0) {
+          setDriverId(availableDrivers[0].id); // Chọn tài xế đầu tiên sẵn sàng
+        } else {
+          setDriverId(null); // Không có tài xế sẵn sàng
+          Alert.alert("Cảnh báo", "Hiện tại không có tài xế sẵn sàng. Đơn hàng sẽ được tạo mà không có tài xế.");
+        }
+      } catch (error) {
+        console.error("Error fetching driver:", error);
+        Alert.alert("Lỗi", "Không thể lấy thông tin tài xế. Vui lòng thử lại.");
+        setDriverId(null);
+      }
+    };
+
     fetchVehicle();
     fetchUserId();
-  }, [vehicleId]);
+    fetchDriver();
+  }, [vehicleId, hasDriver]); // Thêm hasDriver vào dependencies
 
   if (!vehicle || userId === null) {
     return (
@@ -121,6 +148,7 @@ const ReviewSummaryScreen = () => {
         address,
         phone,
         hasDriver,
+        driverId: driverId, // Sử dụng driverId từ state
         quantity,
         paymentMethod,
         subtotal,
@@ -128,7 +156,7 @@ const ReviewSummaryScreen = () => {
         tax,
         total,
         orderDate: new Date().toISOString(),
-        status: "Chờ xác thực", // Thêm trường status với giá trị mặc định
+        status: "Chờ xác thực",
       };
 
       await addDoc(collection(db, "orders"), orderData);
@@ -337,3 +365,4 @@ const styles = StyleSheet.create({
   paymentButtonText: { color: "white", fontSize: 16, fontWeight: "bold" },
   errorText: { fontSize: 18, textAlign: "center", color: "red", marginTop: 50 },
 });
+

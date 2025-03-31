@@ -15,12 +15,7 @@ const NotifyScreen = () => {
 
   // Dữ liệu thông báo tĩnh (dịch sang tiếng Việt)
   const notifications = [
-    {
-      icon: "chatbubble-outline",
-      title: "Yêu cầu sản phẩm từ Kathryn",
-      description: "Kathryn đã gửi cho bạn một tin nhắn về yêu cầu sản phẩm. Nhấn để xem.",
-      time: "1 năm trước",
-    },
+    
     {
       icon: "cube-outline",
       title: "Xác nhận đơn hàng",
@@ -52,15 +47,21 @@ const NotifyScreen = () => {
       time: "1 năm trước",
     },
     {
-      icon: "chatbubble-outline",
-      title: "Tin nhắn từ Julia",
-      description: "Julia đã gửi cho bạn một tin nhắn. Nhấn để đọc.",
+      icon: "pricetag-outline",
+      title: "Giảm giá đặc biệt cho bạn",
+      description: "Chúng tôi đã tạo ra một mã giảm giá đặc biệt cho bạn. Nhấn để nhận mã.",
+      time: "1 năm trước",
+    },
+    {
+      icon: "cube-outline",
+      title: "Đơn hàng đã được giao",
+      description: "Đơn hàng của bạn đã được giao thành công. Cảm ơn bạn đã mua sắm với chúng tôi.",
       time: "1 năm trước",
     },
     {
       icon: "chatbubble-outline",
-      title: "Tin nhắn từ Joanna",
-      description: "Joanna đã gửi cho bạn một tin nhắn. Nhấn để đọc.",
+      title: "Khảo sát khách hàng",
+      description: "Chúng tôi muốn nghe ý kiến của bạn! Nhấn để tham gia khảo sát.",
       time: "1 năm trước",
     },
   ];

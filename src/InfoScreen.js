@@ -23,15 +23,20 @@ const InfoScreen = ({ route, navigation }) => {
     if (typeof imageData === "string" && imageData.startsWith("data:image")) {
       return { uri: imageData };
     } else {
-      console.log("Invalid image data in InfoScreen:", imageData); // Log để debug
-      return require("./assets/icons/compass-active.png"); // Ảnh mặc định
+      console.log("Invalid image data in InfoScreen:", imageData);
+      return require("./assets/icons/compass-active.png");
     }
+  };
+
+  // Hàm định dạng số tiền
+  const formatNumber = (number) => {
+    const numStr = number.toString().replace(/[^0-9]/g, "");
+    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
   // Lấy dữ liệu xe từ Firestore dựa trên id
   useEffect(() => {
     const fetchVehicle = async () => {
-      // Kiểm tra route.params.id có tồn tại không
       if (!route.params || !route.params.id) {
         console.log("Missing route.params.id:", route.params);
         Alert.alert("Lỗi", "Không tìm thấy ID xe. Vui lòng thử lại.");
@@ -103,7 +108,7 @@ const InfoScreen = ({ route, navigation }) => {
               {vehicle.make} {vehicle.model}
             </Text>
             <Text style={styles.price}>
-              <Text style={styles.amount}>{vehicle.price_per_day}đ</Text> /ngày
+              <Text style={styles.amount}>{formatNumber(vehicle.price_per_day)}đ</Text> /ngày
             </Text>
           </View>
           <Text style={styles.typetranText}>

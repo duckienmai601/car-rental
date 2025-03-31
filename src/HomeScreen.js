@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Text,
   View,
+  RefreshControl,
+  Alert,
 } from "react-native";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../firebase";
@@ -23,35 +25,50 @@ const HomeScreen = ({ navigation }) => {
   const [selectedFilter, setSelectedFilter] = useState("Tất cả");
   const [searchKeyword, setSearchKeyword] = useState("");
   const [user, setUser] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Hàm lấy ảnh dựa trên tên file hoặc base64 string
   const getImage = (imageData) => {
-    // Kiểm tra imageData có phải là chuỗi và bắt đầu bằng "data:image"
     if (typeof imageData === "string" && imageData.startsWith("data:image")) {
       return { uri: imageData };
     } else {
-      console.log("Invalid image data:", imageData); // Log để debug
-      return require("./assets/icons/compass-active.png"); // Ảnh mặc định
+      console.log("Invalid image data:", imageData);
+      return require("./assets/icons/compass-active.png");
     }
   };
 
-  // Lấy dữ liệu từ Firestore
-  useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "vehicles"));
-        const vehiclesList = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setVehicles(vehiclesList);
-        setFilteredVehicles(vehiclesList);
-      } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu từ Firestore:", error);
-        alert("Lỗi khi lấy dữ liệu: " + error.message);
-      }
-    };
+  // Hàm định dạng số tiền
+  const formatNumber = (number) => {
+    // Chuyển đổi number thành chuỗi và loại bỏ ký tự không phải số
+    const numStr = number.toString().replace(/[^0-9]/g, "");
+    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
 
+  // Hàm lấy dữ liệu từ Firestore
+  const fetchVehicles = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "vehicles"));
+      const vehiclesList = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setVehicles(vehiclesList);
+      setFilteredVehicles(vehiclesList);
+    } catch (error) {
+      console.error("Lỗi khi lấy dữ liệu từ Firestore:", error);
+      alert("Lỗi khi lấy dữ liệu: " + error.message);
+    }
+  };
+
+  // Hàm xử lý khi kéo xuống để refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchVehicles();
+    setRefreshing(false);
+  };
+
+  // Lấy dữ liệu từ Firestore khi component mount
+  useEffect(() => {
     fetchVehicles();
   }, []);
 
@@ -103,9 +120,24 @@ const HomeScreen = ({ navigation }) => {
     filterVehicles(filter, searchKeyword);
   };
 
+  // Xử lý khi nhấn vào biểu tượng thông báo
+  const handleNotificationPress = () => {
+    if (!user) {
+      Alert.alert("Thông báo", "Vui lòng đăng nhập để xem thông báo!", [], {
+        cancelable: true,
+      });
+    } else {
+      navigation.navigate("Notify");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView>
+      <ScrollView
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         <View style={styles.container}>
           {/* Header Section */}
           <View style={styles.headerSection}>
@@ -133,7 +165,7 @@ const HomeScreen = ({ navigation }) => {
             <View style={styles.headerIcons}>
               <TouchableOpacity
                 style={styles.iconButton}
-                onPress={() => navigation.navigate("Notify")}
+                onPress={handleNotificationPress}
               >
                 <Ionicons name="notifications-outline" size={24} color="black" />
               </TouchableOpacity>
@@ -226,7 +258,9 @@ const HomeScreen = ({ navigation }) => {
                     </Text>
                   </Text>
                   <Text style={styles.infoPrice}>
-                    <Text style={styles.infoAmount}>{vehicle.price_per_day}đ</Text>{" "}
+                    <Text style={styles.infoAmount}>
+                      {formatNumber(vehicle.price_per_day)}đ
+                    </Text>{" "}
                     /ngày
                   </Text>
                 </View>

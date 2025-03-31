@@ -59,8 +59,7 @@ const LoginScreen = ({ navigation }) => {
       // Điều hướng đến màn hình Home
       navigation.replace("Home");
     } catch (error) {
-      console.error("Đăng nhập thất bại:", error);
-      Alert.alert("Đăng nhập thất bại", error.message);
+      Alert.alert("Đăng nhập thất bại", "Email hoặc mật khẩu không chính xác. Vui lòng thử lại!");
     }
   };
 

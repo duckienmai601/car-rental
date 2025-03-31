@@ -59,7 +59,6 @@ const SignupScreen = ({ navigation }) => {
       // Điều hướng đến màn hình Home sau khi đăng ký thành công
       navigation.replace("Home");
     } catch (error) {
-      console.error("Đăng ký thất bại:", error);
       Alert.alert("Đăng ký thất bại", error.message);
     }
   };
