@@ -32,45 +32,33 @@ const HomeScreen = ({ navigation }) => {
     if (typeof imageData === "string" && imageData.startsWith("data:image")) {
       return { uri: imageData };
     } else {
-      console.log("Invalid image data:", imageData);
-      return require("./assets/icons/compass-active.png");
+      console.log("Invalid image data:", imageData); // Log để debug
+      return require("./assets/icons/compass-active.png"); // Ảnh mặc định
     }
   };
 
-  // Hàm định dạng số tiền
-  const formatNumber = (number) => {
-    // Chuyển đổi number thành chuỗi và loại bỏ ký tự không phải số
-    const numStr = number.toString().replace(/[^0-9]/g, "");
-    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-  };
-
-  // Hàm lấy dữ liệu từ Firestore
-  const fetchVehicles = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "vehicles"));
-      const vehiclesList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setVehicles(vehiclesList);
-      setFilteredVehicles(vehiclesList);
-    } catch (error) {
-      console.error("Lỗi khi lấy dữ liệu từ Firestore:", error);
-      alert("Lỗi khi lấy dữ liệu: " + error.message);
-    }
-  };
-
-  // Hàm xử lý khi kéo xuống để refresh
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchVehicles();
-    setRefreshing(false);
-  };
-
-  // Lấy dữ liệu từ Firestore khi component mount
+  // Lấy dữ liệu từ Firestore
   useEffect(() => {
+    const fetchVehicles = async () => {
+      console.log("Firestore instance:", db); // Kiểm tra Firestore có tồn tại không
+      try {
+        const querySnapshot = await getDocs(collection(db, "vehicles"));
+        const vehiclesList = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        console.log("Dữ liệu lấy từ Firestore:", vehiclesList);
+        setVehicles(vehiclesList);
+        setFilteredVehicles(vehiclesList);
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu từ Firestore:", error);
+        alert("Lỗi khi lấy dữ liệu: " + error.message);
+      }
+    };
+  
     fetchVehicles();
   }, []);
+  
 
   // Theo dõi trạng thái đăng nhập
   useEffect(() => {

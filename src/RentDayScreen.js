@@ -4,6 +4,7 @@ import { Calendar } from "react-native-calendars";
 import { useNavigation } from "@react-navigation/native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 
+
 const RentDayScreen = ({ route }) => {
   const navigation = useNavigation();
 

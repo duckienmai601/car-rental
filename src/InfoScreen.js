@@ -11,7 +11,7 @@ import { auth } from "../firebase";
 import { db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { Alert } from "react-native";
-
+import Rating from "./Rating";
 // Import biểu tượng tĩnh
 const back = require("./assets/icons/left-arrow.png");
 
@@ -161,6 +161,7 @@ const InfoScreen = ({ route, navigation }) => {
         >
           <Text style={styles.rentButtonText}>Thuê xe</Text>
         </TouchableOpacity>
+        <Rating vehicleId={vehicle.id} />
       </View>
     </SafeAreaView>
   );
