@@ -21,11 +21,14 @@ const ReviewSummaryScreen = () => {
 
   const [vehicle, setVehicle] = useState(null);
   const [userId, setUserId] = useState(null);
-  const [driverId, setDriverId] = useState(null); // State để lưu driverId
+  const [driverId, setDriverId] = useState(null);
 
   useEffect(() => {
     const fetchVehicle = async () => {
       try {
+        if (!vehicleId || typeof vehicleId !== "string") {
+          throw new Error("ID xe không hợp lệ.");
+        }
         const vehicleRef = doc(db, "vehicles", vehicleId);
         const vehicleSnap = await getDoc(vehicleRef);
         if (vehicleSnap.exists()) {
@@ -50,6 +53,9 @@ const ReviewSummaryScreen = () => {
         const usersSnapshot = await getDocs(usersQuery);
         if (!usersSnapshot.empty) {
           const userData = usersSnapshot.docs[0].data();
+          if (!userData.id || typeof userData.id !== "string") {
+            throw new Error("ID người dùng không hợp lệ.");
+          }
           setUserId(userData.id);
         } else {
           Alert.alert("Lỗi", "Không tìm thấy thông tin user trong hệ thống!");
@@ -62,20 +68,20 @@ const ReviewSummaryScreen = () => {
 
     const fetchDriver = async () => {
       if (!hasDriver) {
-        setDriverId(null); // Nếu không chọn tài xế, đặt driverId là null
+        setDriverId(null);
         return;
       }
 
       try {
         const driversSnapshot = await getDocs(collection(db, "taxiDrivers"));
         const availableDrivers = driversSnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(driver => driver.status === "available"); // Tìm tài xế có status là "available"
+          .map((doc) => ({ id: doc.id, ...doc.data() }))
+          .filter((driver) => driver.status === "available");
 
         if (availableDrivers.length > 0) {
-          setDriverId(availableDrivers[0].id); // Chọn tài xế đầu tiên sẵn sàng
+          setDriverId(availableDrivers[0].id);
         } else {
-          setDriverId(null); // Không có tài xế sẵn sàng
+          setDriverId(null);
           Alert.alert("Cảnh báo", "Hiện tại không có tài xế sẵn sàng. Đơn hàng sẽ được tạo mà không có tài xế.");
         }
       } catch (error) {
@@ -88,7 +94,7 @@ const ReviewSummaryScreen = () => {
     fetchVehicle();
     fetchUserId();
     fetchDriver();
-  }, [vehicleId, hasDriver]); // Thêm hasDriver vào dependencies
+  }, [vehicleId, hasDriver]);
 
   if (!vehicle || userId === null) {
     return (
@@ -115,7 +121,7 @@ const ReviewSummaryScreen = () => {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
-  const pricePerDay = vehicle.price_per_day;
+  const pricePerDay = vehicle.price_per_day || 0;
   const subtotal = pricePerDay * numberOfDays * quantity;
   const driverFee = hasDriver ? 100000 : 0;
   const tax = subtotal * 0.1;
@@ -128,17 +134,25 @@ const ReviewSummaryScreen = () => {
         throw new Error("Người dùng chưa đăng nhập!");
       }
 
-      const ordersSnapshot = await getDocs(collection(db, "orders"));
-      const newOrderId = ordersSnapshot.size + 1;
+      if (!userId || typeof userId !== "string") {
+        throw new Error("ID người dùng không hợp lệ.");
+      }
+
+      if (!vehicleId || typeof vehicleId !== "string") {
+        throw new Error("ID xe không hợp lệ.");
+      }
+
+      if (hasDriver && driverId && typeof driverId !== "string") {
+        throw new Error("ID tài xế không hợp lệ.");
+      }
 
       const orderData = {
-        id: newOrderId,
         userId: userId,
         vehicleId,
-        vehicleMake: vehicle.make,
-        vehicleModel: vehicle.model,
-        image: vehicle.image,
-        pricePerDay: vehicle.price_per_day,
+        vehicleMake: vehicle.make || "N/A",
+        vehicleModel: vehicle.model || "N/A",
+        image: vehicle.image || "",
+        pricePerDay: vehicle.price_per_day || 0,
         fromDate,
         toDate,
         fromTime,
@@ -148,7 +162,7 @@ const ReviewSummaryScreen = () => {
         address,
         phone,
         hasDriver,
-        driverId: driverId, // Sử dụng driverId từ state
+        driverId: hasDriver ? driverId : null, // Đảm bảo driverId là null nếu không có tài xế
         quantity,
         paymentMethod,
         subtotal,
@@ -181,13 +195,13 @@ const ReviewSummaryScreen = () => {
 
           <View style={styles.orderSummary}>
             <Image
-              source={{ uri: vehicle.image }}
+              source={{ uri: vehicle.image || "https://via.placeholder.com/80" }}
               style={styles.vehicleImage}
               resizeMode="contain"
             />
             <View style={styles.orderDetails}>
               <Text style={styles.vehicleTitle}>
-                {vehicle.make} {vehicle.model}
+                {vehicle.make || "N/A"} {vehicle.model || "N/A"}
               </Text>
               <Text style={styles.price}>
                 {formatNumber(pricePerDay)}đ x {quantity}
@@ -199,15 +213,15 @@ const ReviewSummaryScreen = () => {
             <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
             <View style={styles.addressItem}>
               <Text style={styles.addressLabel}>Tên:</Text>
-              <Text style={styles.addressValue}>{fullName}</Text>
+              <Text style={styles.addressValue}>{fullName || "N/A"}</Text>
             </View>
             <View style={styles.addressItem}>
               <Text style={styles.addressLabel}>Địa chỉ:</Text>
-              <Text style={styles.addressValue}>{address}</Text>
+              <Text style={styles.addressValue}>{address || "N/A"}</Text>
             </View>
             <View style={styles.addressItem}>
               <Text style={styles.addressLabel}>Số điện thoại:</Text>
-              <Text style={styles.addressValue}>{phone}</Text>
+              <Text style={styles.addressValue}>{phone || "N/A"}</Text>
             </View>
           </View>
           <View style={styles.divider} />
@@ -268,7 +282,7 @@ const ReviewSummaryScreen = () => {
             <View style={styles.paymentMethodRow}>
               <View style={styles.paymentMethodInfo}>
                 <Ionicons name="card" size={24} color="black" />
-                <Text style={styles.paymentMethodText}>{paymentMethod}</Text>
+                <Text style={styles.paymentMethodText}>{paymentMethod || "N/A"}</Text>
               </View>
             </View>
           </View>

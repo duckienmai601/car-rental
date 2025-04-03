@@ -30,8 +30,8 @@ const OrderSuccessfulScreen = () => {
         </View>
 
         {/* Tiêu đề và mô tả */}
-        <Text style={styles.title}>Đặt hàng thành công!</Text>
-        <Text style={styles.description}>Bạn đã đặt hàng thành công.</Text>
+        <Text style={styles.title}>Đặt xe thành công!</Text>
+        <Text style={styles.description}>Bạn đã đặt xe thành công.</Text>
 
         {/* Nút View Order */}
         <TouchableOpacity style={styles.primaryButton} onPress={handleViewOrder}>
