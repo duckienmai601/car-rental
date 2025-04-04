@@ -26,13 +26,21 @@ const HomeScreen = ({ navigation }) => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [user, setUser] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchOrders();
+    setRefreshing(false);
+  };
+  const formatNumber = (number) => {
+    const numStr = number.toString().replace(/[^0-9]/g, "");
+    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
   // Hàm lấy ảnh dựa trên tên file hoặc base64 string
   const getImage = (imageData) => {
     if (typeof imageData === "string" && imageData.startsWith("data:image")) {
       return { uri: imageData };
     } else {
-      console.log("Invalid image data:", imageData); // Log để debug
+
       return require("./assets/icons/compass-active.png"); // Ảnh mặc định
     }
   };
@@ -40,18 +48,16 @@ const HomeScreen = ({ navigation }) => {
   // Lấy dữ liệu từ Firestore
   useEffect(() => {
     const fetchVehicles = async () => {
-      console.log("Firestore instance:", db); // Kiểm tra Firestore có tồn tại không
       try {
         const querySnapshot = await getDocs(collection(db, "vehicles"));
         const vehiclesList = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
         }));
-        console.log("Dữ liệu lấy từ Firestore:", vehiclesList);
         setVehicles(vehiclesList);
         setFilteredVehicles(vehiclesList);
       } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu từ Firestore:", error);
+    
         alert("Lỗi khi lấy dữ liệu: " + error.message);
       }
     };

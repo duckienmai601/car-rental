@@ -11,7 +11,8 @@ import {
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc,collection } from "firebase/firestore";
+import Rating from "./Rating"; // Đường dẫn tùy theo bạn lưu file ở đâu
 
 const OrderDetailsScreen = () => {
   const navigation = useNavigation();
@@ -194,6 +195,15 @@ const OrderDetailsScreen = () => {
             </View>
           </View>
           <View style={styles.divider} />
+          {order?.status?.trim().toLowerCase() === "hoàn thành" && (
+            <View style={{ padding: 16, alignItems: "center" }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 10 }}>
+                🎉 Đơn hàng đã hoàn thành – Đánh giá trải nghiệm của bạn
+              </Text>
+              <Rating vehicleId={order?.vehicleId} orderStatus={order?.status} />
+
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

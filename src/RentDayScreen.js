@@ -65,7 +65,6 @@ const RentDayScreen = ({ route }) => {
         currentDate.setDate(currentDate.getDate() + 1);
       }
       setSelectedDates(range);
-      console.log("Marked Dates:", range); // Debug để kiểm tra markedDates
     }
   };
 

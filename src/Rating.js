@@ -1,27 +1,33 @@
 // Rating.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, Modal, Alert, StyleSheet } from "react-native";
-import { doc, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, updateDoc, arrayUnion, getDoc } from "firebase/firestore";
 import { db, auth } from "../firebase"; // Import Firestore và Auth
 
-const Rating = ({ vehicleId }) => {
+const Rating = ({ vehicleId, orderStatus }) => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [selectedRating, setSelectedRating] = useState(0);
   const user = auth.currentUser;
 
-  // Hàm lưu đánh giá vào Firestore
+  // ❌ Xoá useEffect và fetchOrderStatus vì ta truyền status từ ngoài vào
+  // ✅ Giữ lại submitRating như cũ
+
   const submitRating = async () => {
     if (!selectedRating) {
       Alert.alert("Lỗi", "Bạn chưa chọn số sao");
       return;
     }
-
+  
     try {
       const vehicleRef = doc(db, "vehicles", vehicleId);
       await updateDoc(vehicleRef, {
-        ratings: arrayUnion({ userId: user.uid, rating: selectedRating }),
+        ratings: arrayUnion({
+          userId: user.uid,
+          userEmail: user.email, // Lưu email người dùng
+          rating: selectedRating,
+        }),
       });
-
+  
       Alert.alert("Cảm ơn!", "Bạn đã đánh giá thành công.");
       setShowRatingModal(false);
     } catch (error) {
@@ -29,10 +35,11 @@ const Rating = ({ vehicleId }) => {
       Alert.alert("Lỗi", "Không thể lưu đánh giá.");
     }
   };
+  
 
   return (
     <>
-      {user && (
+      {user && orderStatus?.toLowerCase() === "hoàn thành" && (
         <TouchableOpacity style={styles.ratingButton} onPress={() => setShowRatingModal(true)}>
           <Text style={styles.ratingButtonText}>Đánh giá dịch vụ</Text>
         </TouchableOpacity>

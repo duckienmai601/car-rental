@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { auth } from "../firebase";
 import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { Alert } from "react-native";
 import Rating from "./Rating";
 // Import biểu tượng tĩnh
@@ -17,13 +17,16 @@ const back = require("./assets/icons/left-arrow.png");
 
 const InfoScreen = ({ route, navigation }) => {
   const [vehicle, setVehicle] = useState(null);
+  const [orderStatus, setOrderStatus] = useState(""); // Lưu trạng thái đơn hàng
+  const [userRatings, setUserRatings] = useState([]); // Lưu thông tin đánh giá của người dùng
+  const [averageRating, setAverageRating] = useState(null);
+  const user = auth.currentUser;
 
   // Hàm lấy ảnh dựa trên base64 string
   const getImage = (imageData) => {
     if (typeof imageData === "string" && imageData.startsWith("data:image")) {
       return { uri: imageData };
     } else {
-      console.log("Invalid image data in InfoScreen:", imageData);
       return require("./assets/icons/compass-active.png");
     }
   };
@@ -38,7 +41,6 @@ const InfoScreen = ({ route, navigation }) => {
   useEffect(() => {
     const fetchVehicle = async () => {
       if (!route.params || !route.params.id) {
-        console.log("Missing route.params.id:", route.params);
         Alert.alert("Lỗi", "Không tìm thấy ID xe. Vui lòng thử lại.");
         navigation.goBack();
         return;
@@ -49,9 +51,30 @@ const InfoScreen = ({ route, navigation }) => {
         const vehicleSnap = await getDoc(vehicleRef);
 
         if (vehicleSnap.exists()) {
-          setVehicle({ id: vehicleSnap.id, ...vehicleSnap.data() });
+          const data = vehicleSnap.data();
+          const ratings = data.ratings || [];
+
+          // Tính trung bình rating
+          let avg = null;
+          if (ratings.length > 0) {
+            const total = ratings.reduce((sum, r) => sum + (r.rating || 0), 0);
+            avg = total / ratings.length;
+          }
+
+          // Lấy tên người dùng từ Firebase
+          const userRatingsData = await Promise.all(
+            ratings.map(async (rating) => {
+              const userRef = doc(db, "users", rating.userId);
+              const userSnap = await getDoc(userRef);
+              const userData = userSnap.exists() ? userSnap.data() : {};
+              return { name: userData.email, rating: rating.rating };
+            })
+          );
+
+          setVehicle({ id: vehicleSnap.id, ...data });
+          setAverageRating(avg); // cập nhật số sao trung bình
+          setUserRatings(userRatingsData); // lưu thông tin đánh giá
         } else {
-          console.log("Không tìm thấy xe với id:", route.params.id);
           Alert.alert("Lỗi", "Không tìm thấy thông tin xe.");
           navigation.goBack();
         }
@@ -107,6 +130,13 @@ const InfoScreen = ({ route, navigation }) => {
             <Text style={styles.makemodelText}>
               {vehicle.make} {vehicle.model}
             </Text>
+            {averageRating !== null && (
+              <Text style={styles.ratingText}>
+                ⭐ {averageRating.toFixed(1)} / 5.0
+              </Text>
+            )}
+          </View>
+          <View>
             <Text style={styles.price}>
               <Text style={styles.amount}>{formatNumber(vehicle.price_per_day)}đ</Text> /ngày
             </Text>
@@ -145,6 +175,20 @@ const InfoScreen = ({ route, navigation }) => {
             </Text>
           </View>
         </View>
+        <View>
+        <Text style={styles.propertiesText}>Đánh giá</Text>
+        </View>
+        {/* Hiển thị danh sách người dùng và số sao */}
+        {userRatings.length > 0 && (
+          <View style={styles.reviewsSection}>
+            {userRatings.map((userRating, index) => (
+              <View key={index} style={styles.reviewItem}>
+                <Text style={styles.reviewUserName}>{userRating.name}</Text>
+                <Text style={styles.reviewRating}>⭐ {userRating.rating}</Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         <TouchableOpacity
           style={styles.rentButton}
@@ -161,7 +205,11 @@ const InfoScreen = ({ route, navigation }) => {
         >
           <Text style={styles.rentButtonText}>Thuê xe</Text>
         </TouchableOpacity>
-        <Rating vehicleId={vehicle.id} />
+        {orderStatus && (
+          <Text style={{ color: "green", fontWeight: "bold", textAlign: "center", marginTop: 10 }}>
+            ✅ Trạng thái đơn hàng: {orderStatus}
+          </Text>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -274,5 +322,30 @@ const styles = StyleSheet.create({
   rentButtonText: {
     color: "white",
     fontWeight: "500",
+  },
+  ratingText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#f39c12',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  reviewsSection: {
+    marginTop: 20,
+  },
+  reviewItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  reviewUserName: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  reviewRating: {
+    fontSize: 16,
+    color: '#f39c12',
   },
 });
