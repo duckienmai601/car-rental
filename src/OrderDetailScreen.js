@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  Alert
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +20,7 @@ const OrderDetailsScreen = () => {
   const route = useRoute();
   const { order } = route.params; // Lấy dữ liệu đơn hàng từ params
   const [driver, setDriver] = useState(null); // State để lưu thông tin tài xế
+  const [isRated, setIsRated] = useState(false);
 
   // Lấy thông tin tài xế từ Firestore dựa trên driverId nếu hasDriver là true
   useEffect(() => {
@@ -40,7 +42,24 @@ const OrderDetailsScreen = () => {
 
     fetchDriver();
   }, [order?.hasDriver, order?.driverId]);
-
+  //xu ly rating 1 order
+  useEffect(() => {
+    const fetchIsRated = async () => {
+      try {
+        const orderRef = doc(db, "orders", order.id);
+        const orderSnap = await getDoc(orderRef);
+        if (orderSnap.exists()) {
+          const orderData = orderSnap.data();
+          setIsRated(orderData.isRated || false);
+        }
+      } catch (error) {
+        console.error("Lỗi khi kiểm tra trạng thái đánh giá:", error);
+      }
+    };
+  
+    fetchIsRated();
+  }, [order.id]);
+  
   const formatDate = (date) => {
     const d = new Date(date);
     const day = String(d.getDate()).padStart(2, "0");
@@ -195,15 +214,29 @@ const OrderDetailsScreen = () => {
             </View>
           </View>
           <View style={styles.divider} />
-          {order?.status?.trim().toLowerCase() === "hoàn thành" && (
+          {order?.status?.trim().toLowerCase() === "hoàn thành" && !isRated && (
             <View style={{ padding: 16, alignItems: "center" }}>
               <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 10 }}>
                 🎉 Đơn hàng đã hoàn thành – Đánh giá trải nghiệm của bạn
               </Text>
-              <Rating vehicleId={order?.vehicleId} orderStatus={order?.status} />
+              <Rating
+                vehicleId={order?.vehicleId}
+                orderId={order?.id}
+                orderStatus={order?.status}
+                onRated={() => setIsRated(true)} // 👈 callback khi đánh giá xong
+              />
 
             </View>
           )}
+
+          {order?.status?.trim().toLowerCase() === "hoàn thành" && isRated && (
+            <View style={{ padding: 16, alignItems: "center" }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold", color: "gray" }}>
+                ✅ Bạn đã đánh giá đơn hàng này.
+              </Text>
+            </View>
+          )}
+
         </View>
       </ScrollView>
     </SafeAreaView>

@@ -64,10 +64,14 @@ const InfoScreen = ({ route, navigation }) => {
           // Lấy tên người dùng từ Firebase
           const userRatingsData = await Promise.all(
             ratings.map(async (rating) => {
+              // Lấy thông tin người dùng từ Firestore
               const userRef = doc(db, "users", rating.userId);
               const userSnap = await getDoc(userRef);
               const userData = userSnap.exists() ? userSnap.data() : {};
-              return { name: userData.email, rating: rating.rating };
+              return {
+                userEmail: rating.userEmail,
+                rating: rating.rating, // Lấy rating
+              };
             })
           );
 
@@ -180,15 +184,16 @@ const InfoScreen = ({ route, navigation }) => {
         </View>
         {/* Hiển thị danh sách người dùng và số sao */}
         {userRatings.length > 0 && (
-          <View style={styles.reviewsSection}>
-            {userRatings.map((userRating, index) => (
-              <View key={index} style={styles.reviewItem}>
-                <Text style={styles.reviewUserName}>{userRating.name}</Text>
-                <Text style={styles.reviewRating}>⭐ {userRating.rating}</Text>
-              </View>
-            ))}
-          </View>
-        )}
+  <View style={styles.reviewsSection}>
+    {userRatings.map((userRating, index) => (
+      <View key={index} style={styles.reviewItem}>
+        <Text style={styles.reviewUserName}>{userRating.userEmail}</Text> 
+        <Text style={styles.reviewRating}>⭐ {userRating.rating}</Text>
+      </View>
+    ))}
+  </View>
+)}
+
 
         <TouchableOpacity
           style={styles.rentButton}
@@ -205,11 +210,7 @@ const InfoScreen = ({ route, navigation }) => {
         >
           <Text style={styles.rentButtonText}>Thuê xe</Text>
         </TouchableOpacity>
-        {orderStatus && (
-          <Text style={{ color: "green", fontWeight: "bold", textAlign: "center", marginTop: 10 }}>
-            ✅ Trạng thái đơn hàng: {orderStatus}
-          </Text>
-        )}
+       
       </View>
     </SafeAreaView>
   );
@@ -332,14 +333,24 @@ const styles = StyleSheet.create({
   },
   reviewsSection: {
     marginTop: 20,
+    height: 70
   },
   reviewItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    alignItems: 'center',
+    padding: 10,
+    marginVertical: 6,
+    marginHorizontal: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
+  
   reviewUserName: {
     fontSize: 16,
     fontWeight: '500',
