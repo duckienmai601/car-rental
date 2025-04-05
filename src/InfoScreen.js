@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ScrollView,
 } from "react-native";
 import { auth } from "../firebase";
 import { db } from "../firebase";
@@ -105,6 +106,7 @@ const InfoScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      
       <View style={styles.container}>
         <View style={styles.headerSection}>
           <TouchableOpacity
@@ -179,21 +181,7 @@ const InfoScreen = ({ route, navigation }) => {
             </Text>
           </View>
         </View>
-        <View>
-        <Text style={styles.propertiesText}>Đánh giá</Text>
-        </View>
-        {/* Hiển thị danh sách người dùng và số sao */}
-        {userRatings.length > 0 && (
-  <View style={styles.reviewsSection}>
-    {userRatings.map((userRating, index) => (
-      <View key={index} style={styles.reviewItem}>
-        <Text style={styles.reviewUserName}>{userRating.userEmail}</Text> 
-        <Text style={styles.reviewRating}>⭐ {userRating.rating}</Text>
-      </View>
-    ))}
-  </View>
-)}
-
+       
 
         <TouchableOpacity
           style={styles.rentButton}
@@ -210,8 +198,24 @@ const InfoScreen = ({ route, navigation }) => {
         >
           <Text style={styles.rentButtonText}>Thuê xe</Text>
         </TouchableOpacity>
-       
+        <View>
+        <Text style={styles.propertiesText}>Đánh giá</Text>
+        </View>
+        <ScrollView>
+        {/* Hiển thị danh sách người dùng và số sao */}
+        {userRatings.length > 0 && (
+  <View style={styles.reviewsSection}>
+    {userRatings.map((userRating, index) => (
+      <View key={index} style={styles.reviewItem}>
+        <Text style={styles.reviewUserName}>{userRating.userEmail}</Text> 
+        <Text style={styles.reviewRating}>⭐ {userRating.rating}</Text>
       </View>
+    ))}
+  </View>
+)}
+</ScrollView>
+      </View>
+     
     </SafeAreaView>
   );
 };
