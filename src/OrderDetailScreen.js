@@ -217,13 +217,13 @@ const OrderDetailsScreen = () => {
           {order?.status?.trim().toLowerCase() === "hoàn thành" && !isRated && (
             <View style={{ padding: 16, alignItems: "center" }}>
               <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 10 }}>
-                🎉 Đơn hàng đã hoàn thành – Đánh giá trải nghiệm của bạn
+                 Đơn hàng đã hoàn thành , Đánh giá trải nghiệm của bạn
               </Text>
               <Rating
                 vehicleId={order?.vehicleId}
                 orderId={order?.id}
                 orderStatus={order?.status}
-                onRated={() => setIsRated(true)} // 👈 callback khi đánh giá xong
+                onRated={() => setIsRated(true)} // callback khi đánh giá xong
               />
 
             </View>
@@ -232,7 +232,7 @@ const OrderDetailsScreen = () => {
           {order?.status?.trim().toLowerCase() === "hoàn thành" && isRated && (
             <View style={{ padding: 16, alignItems: "center" }}>
               <Text style={{ fontSize: 16, fontWeight: "bold", color: "gray" }}>
-                ✅ Bạn đã đánh giá đơn hàng này.
+                Bạn đã đánh giá đơn hàng này.
               </Text>
             </View>
           )}

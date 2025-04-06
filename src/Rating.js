@@ -73,55 +73,73 @@ const Rating = ({ vehicleId, orderStatus, orderId, onRated }) => {
   );
 };
 
+
+
 const styles = StyleSheet.create({
   ratingButton: {
-    backgroundColor: "#ffcc00",
-    padding: 10,
-    borderRadius: 5,
-    alignItems: "center",
+    backgroundColor: '#ffb300',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 30,
+    alignSelf: 'center',
     marginTop: 10,
+    elevation: 3,
   },
   ratingButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
     fontSize: 16,
-    fontWeight: "bold",
   },
   modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.5)",
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    marginTop: '50%',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 10,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 10,
-    color: "white",
+    fontWeight: 'bold',
+    marginBottom: 16,
+    color: '#333',
   },
   starContainer: {
-    flexDirection: "row",
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 12,
   },
   star: {
     fontSize: 40,
-    color: "#bbb",
-    marginHorizontal: 5,
+    color: '#ccc',
+    marginHorizontal: 6,
   },
   selectedStar: {
-    color: "#ffcc00",
+    color: '#FFD700', // Màu vàng khi chọn
+    transform: [{ scale: 1.2 }],
   },
   submitButton: {
-    backgroundColor: "#00cc66",
-    padding: 10,
-    marginTop: 10,
-    borderRadius: 5,
+    backgroundColor: '#28a745',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 30,
+    marginTop: 12,
   },
   submitButtonText: {
-    color: "white",
+    color: 'white',
+    fontWeight: 'bold',
     fontSize: 16,
   },
   closeText: {
-    color: "white",
-    fontSize: 16,
-    marginTop: 10,
+    marginTop: 16,
+    color: '#999',
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
 });
 
