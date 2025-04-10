@@ -21,9 +21,37 @@ const OrderDetailsScreen = () => {
   const { order } = route.params; // Lấy dữ liệu đơn hàng từ params
   const [driver, setDriver] = useState(null); // State để lưu thông tin tài xế
   const [isRated, setIsRated] = useState(false);
+  const [vehicle, setVehicle] = useState(null);
 
+  useEffect(() => {
+    const fetchOrder = async () => {
+      const orderRef = doc(db, "orders", orderId); // orderId là id của đơn đang xem
+      const orderSnap = await getDoc(orderRef);
+      if (orderSnap.exists()) {
+        setOrder(orderSnap.data());
+      }
+    };
+  
+    fetchOrder();
+  }, []);
+  
+
+  useEffect(() => {
+    const fetchVehicle = async () => {
+      if (order?.vehicleId) {
+        const docRef = doc(db, "vehicles", order.vehicleId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setVehicle(docSnap.data());
+        }
+      }
+    };
+  
+    fetchVehicle();
+  }, [order]);
   // Lấy thông tin tài xế từ Firestore dựa trên driverId nếu hasDriver là true
   useEffect(() => {
+  
     const fetchDriver = async () => {
       try {
         if (order?.hasDriver && order?.driverId) {
@@ -117,6 +145,19 @@ const OrderDetailsScreen = () => {
               <Text style={styles.addressLabel}>Số điện thoại:</Text>
               <Text style={styles.addressValue}>{order?.phone || "N/A"}</Text>
             </View>
+            <View style={styles.rentalPeriodRow}>
+            <Text style={styles.rentalPeriodLabel}>Biển số xe:</Text>
+            <Text style={styles.rentalPeriodValue}>
+              {order?.plateNumber
+                ? Object.keys(order.plateNumber).join(", ")
+                : "Chưa gán"}
+            </Text>
+
+
+
+          </View>
+
+
           </View>
           <View style={styles.divider} />
 

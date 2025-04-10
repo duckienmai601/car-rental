@@ -15,7 +15,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
-
+import { useIsFocused } from "@react-navigation/native";
 // Import các file ảnh tĩnh
 const magnifying_glass = require("./assets/icons/magnifying-glass.png");
 
@@ -26,6 +26,7 @@ const HomeScreen = ({ navigation }) => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [user, setUser] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const isFocused = useIsFocused();
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchOrders();
@@ -53,17 +54,20 @@ const HomeScreen = ({ navigation }) => {
         const vehiclesList = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
-        }));
+        }))
+        .filter(vehicle => vehicle.available_quantity > 0);
+        
         setVehicles(vehiclesList);
         setFilteredVehicles(vehiclesList);
       } catch (error) {
-    
         alert("Lỗi khi lấy dữ liệu: " + error.message);
       }
     };
-  
-    fetchVehicles();
-  }, []);
+
+    if (isFocused) {
+      fetchVehicles(); // 👈 chỉ fetch khi màn hình được focus
+    }
+  }, [isFocused]); // 👈 khi isFocused thay đổi, useEffect chạy lại
   
 
   // Theo dõi trạng thái đăng nhập
@@ -103,6 +107,14 @@ const HomeScreen = ({ navigation }) => {
     } else if (filter === "Nhiên liệu (Điện)") {
       results = results.filter(
         (vehicle) => vehicle.properties.fuel_type.toLowerCase() === "điện"
+      );
+    } else if (filter === "Xe 4 chỗ") {
+      results = results.filter(
+        (vehicle) => vehicle.seat === "4"
+      );
+    } else if (filter === "Xe 7 chỗ") {
+      results = results.filter(
+        (vehicle) => vehicle.seat === "7"
       );
     }
 
@@ -209,6 +221,8 @@ const HomeScreen = ({ navigation }) => {
               "Giá (Thấp-Cao)",
               "Nhiên liệu (Xăng)",
               "Nhiên liệu (Điện)",
+              "Xe 4 chỗ",
+              "Xe 7 chỗ",
             ].map((filter, index) => (
               <TouchableOpacity
                 key={index}

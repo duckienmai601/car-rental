@@ -18,7 +18,6 @@ const back = require("./assets/icons/left-arrow.png");
 
 const InfoScreen = ({ route, navigation }) => {
   const [vehicle, setVehicle] = useState(null);
-  const [orderStatus, setOrderStatus] = useState(""); // Lưu trạng thái đơn hàng
   const [userRatings, setUserRatings] = useState([]); // Lưu thông tin đánh giá của người dùng
   const [averageRating, setAverageRating] = useState(null);
   const user = auth.currentUser;
@@ -157,6 +156,12 @@ const InfoScreen = ({ route, navigation }) => {
 
         <View style={styles.propertiesArea}>
           <View style={styles.level}>
+          <Text style={styles.propertyText}>
+          <Text style={styles.labelText}>Số chỗ: </Text>
+          <Text style={styles.valueText}>
+                {vehicle.seat} 
+              </Text>
+            </Text>
             <Text style={styles.propertyText}>
               <Text style={styles.labelText}>Sức mạnh động cơ: </Text>
               <Text style={styles.valueText}>

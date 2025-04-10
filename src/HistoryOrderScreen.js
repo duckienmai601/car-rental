@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { db, auth } from "../firebase";
-import { collection, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, query, where, deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 
 const HistoryOrderScreen = () => {
@@ -121,7 +121,35 @@ const HistoryOrderScreen = () => {
           onPress: async () => {
             try {
               const orderRef = doc(db, "orders", orderId);
-              await deleteDoc(orderRef);
+              const orderSnap = await getDoc(orderRef);
+          
+              if (!orderSnap.exists()) {
+                Alert.alert("Lỗi", "Không tìm thấy đơn hàng.");
+                return;
+              }
+          
+              const orderData = orderSnap.data();
+              const { vehicleId, quantity } = orderData;
+          
+              // Cập nhật lại available_quantity
+              const vehicleRef = doc(db, "vehicles", vehicleId);
+              await runTransaction(db, async (transaction) => {
+                const vehicleSnap = await transaction.get(vehicleRef);
+          
+                if (!vehicleSnap.exists()) {
+                  throw new Error("Không tìm thấy xe để cập nhật số lượng.");
+                }
+          
+                const currentAvailable = vehicleSnap.data().available_quantity || 0;
+                transaction.update(vehicleRef, {
+                  available_quantity: currentAvailable + (quantity || 1),
+                });
+          
+                // Sau khi cộng lại available_quantity -> xóa đơn
+                transaction.delete(orderRef);
+              });
+          
+              // Cập nhật state hiển thị
               setOrders(orders.filter((order) => order.id !== orderId));
               Alert.alert("Thành công", "Đơn hàng đã được hủy.");
             } catch (error) {
