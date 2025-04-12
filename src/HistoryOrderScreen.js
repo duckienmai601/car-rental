@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { db, auth } from "../firebase";
-import { collection, getDocs, query, where, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, query, where, deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
 
 const HistoryOrderScreen = () => {
@@ -37,10 +37,7 @@ const HistoryOrderScreen = () => {
         const userData = usersSnapshot.docs[0].data();
         setUserId(userData.id);
         return userData.id;
-      } else {
-        Alert.alert("Lỗi", "Không tìm thấy thông tin user trong hệ thống!");
-        return null;
-      }
+      } 
     } catch (error) {
       console.error("Error fetching user ID:", error);
       Alert.alert("Lỗi", "Không thể lấy thông tin user. Vui lòng thử lại.");
@@ -121,7 +118,35 @@ const HistoryOrderScreen = () => {
           onPress: async () => {
             try {
               const orderRef = doc(db, "orders", orderId);
-              await deleteDoc(orderRef);
+              const orderSnap = await getDoc(orderRef);
+
+              if (!orderSnap.exists()) {
+                Alert.alert("Lỗi", "Không tìm thấy đơn hàng.");
+                return;
+              }
+
+              const orderData = orderSnap.data();
+              const { vehicleId, quantity } = orderData;
+
+              // Cập nhật lại available_quantity
+              const vehicleRef = doc(db, "vehicles", vehicleId);
+              await runTransaction(db, async (transaction) => {
+                const vehicleSnap = await transaction.get(vehicleRef);
+
+                if (!vehicleSnap.exists()) {
+                  throw new Error("Không tìm thấy xe để cập nhật số lượng.");
+                }
+
+                const currentAvailable = vehicleSnap.data().available_quantity || 0;
+                transaction.update(vehicleRef, {
+                  available_quantity: currentAvailable + (quantity || 1),
+                });
+
+                // Sau khi cộng lại available_quantity -> xóa đơn
+                transaction.delete(orderRef);
+              });
+
+              // Cập nhật state hiển thị
               setOrders(orders.filter((order) => order.id !== orderId));
               Alert.alert("Thành công", "Đơn hàng đã được hủy.");
             } catch (error) {
@@ -206,6 +231,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
+    marginTop: 40, // Thêm khoảng trống nhỏ ở đầu trang, tương tự PrivacyScreen và InfoScreen
   },
   headerText: {
     fontSize: 28,
@@ -216,7 +242,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 15,
     paddingBottom: 20,
-    paddingTop: 10,
+    paddingTop: 20, // Điều chỉnh paddingTop để cân đối khoảng cách
   },
   emptyText: {
     fontSize: 18,
@@ -295,3 +321,4 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 });
+

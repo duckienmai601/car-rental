@@ -15,6 +15,7 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
+import { useIsFocused } from "@react-navigation/native";
 
 // Import các file ảnh tĩnh
 const magnifying_glass = require("./assets/icons/magnifying-glass.png");
@@ -26,6 +27,13 @@ const HomeScreen = ({ navigation }) => {
   const [searchKeyword, setSearchKeyword] = useState("");
   const [user, setUser] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const isFocused = useIsFocused();
+
+  // Hàm định dạng số tiền
+  const formatNumber = (number) => {
+    const numStr = number.toString().replace(/[^0-9]/g, "");
+    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
 
   // Hàm lấy ảnh dựa trên tên file hoặc base64 string
   const getImage = (imageData) => {
@@ -33,25 +41,21 @@ const HomeScreen = ({ navigation }) => {
       return { uri: imageData };
     } else {
       console.log("Invalid image data:", imageData);
-      return require("./assets/icons/compass-active.png");
+      return require("./assets/icons/compass-active.png"); // Ảnh mặc định
     }
-  };
-
-  // Hàm định dạng số tiền
-  const formatNumber = (number) => {
-    // Chuyển đổi number thành chuỗi và loại bỏ ký tự không phải số
-    const numStr = number.toString().replace(/[^0-9]/g, "");
-    return numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
   // Hàm lấy dữ liệu từ Firestore
   const fetchVehicles = async () => {
     try {
       const querySnapshot = await getDocs(collection(db, "vehicles"));
-      const vehiclesList = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const vehiclesList = querySnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter(vehicle => vehicle.available_quantity > 0); // Lọc xe có số lượng khả dụng > 0
+
       setVehicles(vehiclesList);
       setFilteredVehicles(vehiclesList);
     } catch (error) {
@@ -63,14 +67,16 @@ const HomeScreen = ({ navigation }) => {
   // Hàm xử lý khi kéo xuống để refresh
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchVehicles();
+    await fetchVehicles(); // Sửa lỗi: thay fetchOrders thành fetchVehicles
     setRefreshing(false);
   };
 
-  // Lấy dữ liệu từ Firestore khi component mount
+  // Lấy dữ liệu từ Firestore khi màn hình được focus
   useEffect(() => {
-    fetchVehicles();
-  }, []);
+    if (isFocused) {
+      fetchVehicles();
+    }
+  }, [isFocused]);
 
   // Theo dõi trạng thái đăng nhập
   useEffect(() => {
@@ -101,7 +107,10 @@ const HomeScreen = ({ navigation }) => {
         return nameA.localeCompare(nameB);
       });
     } else if (filter === "Giá (Thấp-Cao)") {
-      results.sort((a, b) => parseFloat(a.price_per_day.replace(/[^0-9.-]+/g, "")) - parseFloat(b.price_per_day.replace(/[^0-9.-]+/g, "")));
+      results.sort((a, b) =>
+        parseFloat(a.price_per_day.replace(/[^0-9.-]+/g, "")) -
+        parseFloat(b.price_per_day.replace(/[^0-9.-]+/g, ""))
+      );
     } else if (filter === "Nhiên liệu (Xăng)") {
       results = results.filter(
         (vehicle) => vehicle.properties.fuel_type.toLowerCase() === "xăng"
@@ -110,6 +119,10 @@ const HomeScreen = ({ navigation }) => {
       results = results.filter(
         (vehicle) => vehicle.properties.fuel_type.toLowerCase() === "điện"
       );
+    } else if (filter === "Xe 4 chỗ") {
+      results = results.filter((vehicle) => vehicle.seat === "4");
+    } else if (filter === "Xe 7 chỗ") {
+      results = results.filter((vehicle) => vehicle.seat === "7");
     }
 
     setFilteredVehicles(results);
@@ -193,10 +206,10 @@ const HomeScreen = ({ navigation }) => {
 
           {/* Promotional Section */}
           <View style={styles.promoSection}>
-            <Text style={styles.promoTitle}>Giảm giá 40%</Text>
+            <Text style={styles.promoTitle}>Dịch vụ thuê xe tiện lợi</Text>
             <Text style={styles.promoSubtitle}>Trong ngày hôm nay</Text>
             <Text style={styles.promoText}>
-              Nhận giảm giá cho mọi đơn hàng. Chỉ áp dụng trong hôm nay!
+            Trải nghiệm hành trình theo cách của bạn!
             </Text>
           </View>
 
@@ -215,6 +228,8 @@ const HomeScreen = ({ navigation }) => {
               "Giá (Thấp-Cao)",
               "Nhiên liệu (Xăng)",
               "Nhiên liệu (Điện)",
+              "Xe 4 chỗ",
+              "Xe 7 chỗ",
             ].map((filter, index) => (
               <TouchableOpacity
                 key={index}
@@ -255,6 +270,13 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.valueText}>
                       {" "}
                       {vehicle.properties.fuel_type}
+                    </Text>
+                  </Text>
+                  <Text style={styles.infoSub}>
+                    Số chỗ ngồi:
+                    <Text style={styles.valueText}>
+                      {" "}
+                      {vehicle.seat || "N/A"}
                     </Text>
                   </Text>
                   <Text style={styles.infoPrice}>

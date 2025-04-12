@@ -2,6 +2,17 @@
   "expo": {
     "name": "rent-a-car",
     "slug": "rent-a-car",
+    "extra": {
+      "eas": {
+        "projectId": "0dc57c63-65d4-4e97-8b68-7f91a55a0dc5"
+      }
+    },
+    "permissions": {
+      "cameraRoll": {
+        "ios": "Allow $(PRODUCT_NAME) to access your photos",
+        "android": "Allow $(PRODUCT_NAME) to access your photos"
+      }
+    },
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

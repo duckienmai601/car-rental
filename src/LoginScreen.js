@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator, // Thêm ActivityIndicator
 } from "react-native";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
@@ -15,6 +16,7 @@ import { collection, addDoc, getDocs, query, where } from "firebase/firestore";
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // Thêm state để kiểm soát loading
 
   // Hàm tạo id tăng dần cho collection "users"
   const getNextId = async () => {
@@ -35,6 +37,7 @@ const LoginScreen = ({ navigation }) => {
   };
 
   const handleLogin = async () => {
+    setIsLoading(true); // Bật trạng thái loading
     try {
       // Đăng nhập user với Firebase Authentication
       await signInWithEmailAndPassword(auth, email, password);
@@ -60,11 +63,21 @@ const LoginScreen = ({ navigation }) => {
       navigation.replace("Home");
     } catch (error) {
       Alert.alert("Đăng nhập thất bại", "Email hoặc mật khẩu không chính xác. Vui lòng thử lại!");
+    } finally {
+      setIsLoading(false); // Tắt trạng thái loading sau khi xử lý xong
     }
   };
 
   return (
     <View style={styles.container}>
+      {/* Hiệu ứng loading */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#000000" />
+          <Text style={styles.loadingText}>Đang đăng nhập...</Text>
+        </View>
+      )}
+
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
@@ -79,6 +92,7 @@ const LoginScreen = ({ navigation }) => {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          editable={!isLoading} // Vô hiệu hóa input khi đang loading
         />
       </View>
       <View style={styles.inputContainer}>
@@ -89,16 +103,21 @@ const LoginScreen = ({ navigation }) => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          editable={!isLoading} // Vô hiệu hóa input khi đang loading
         />
       </View>
-      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+      <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")} disabled={isLoading}>
         <Text style={styles.linkText}>Quên mật khẩu?</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
+      <TouchableOpacity
+        style={[styles.button, isLoading && styles.buttonDisabled]} // Làm mờ nút khi đang loading
+        onPress={handleLogin}
+        disabled={isLoading} // Vô hiệu hóa nút khi đang loading
+      >
         <Text style={styles.buttonText}>Đăng Nhập</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate("Signup")}>
+      <TouchableOpacity onPress={() => navigation.navigate("Signup")} disabled={isLoading}>
         <Text style={styles.linkText}>Chưa có tài khoản? Đăng ký</Text>
       </TouchableOpacity>
     </View>
@@ -154,6 +173,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
+  buttonDisabled: {
+    backgroundColor: "#666", // Màu xám khi nút bị vô hiệu hóa
+    opacity: 0.6, // Làm mờ nút khi đang loading
+  },
   buttonText: {
     color: "white",
     fontSize: 18,
@@ -165,5 +188,19 @@ const styles = StyleSheet.create({
     color: "black",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  // Styles cho hiệu ứng loading
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject, // Chiếm toàn bộ màn hình
+    backgroundColor: "rgba(255, 255, 255, 0.8)", // Nền trắng mờ
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000, // Đảm bảo overlay nằm trên cùng
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
   },
 });

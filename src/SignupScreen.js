@@ -6,16 +6,19 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator, // Thêm ActivityIndicator
 } from "react-native";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase";
 import { Ionicons } from "@expo/vector-icons";
 import { collection, addDoc, getDocs } from "firebase/firestore";
+import initializePushNotifications from "../src/services/PushNotificationController"; // Import initializePushNotifications
 
 const SignupScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false); // Thêm state để kiểm soát loading
 
   // Hàm tạo id tăng dần cho collection "users"
   const getNextId = async () => {
@@ -41,9 +44,11 @@ const SignupScreen = ({ navigation }) => {
       return;
     }
 
+    setIsLoading(true); // Bật trạng thái loading
     try {
       // Đăng ký user với Firebase Authentication
-      await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
       // Lấy id tiếp theo cho user
       const newUserId = await getNextId();
@@ -51,20 +56,35 @@ const SignupScreen = ({ navigation }) => {
       // Lưu thông tin user vào collection "users"
       await addDoc(collection(db, "users"), {
         id: newUserId,
-        email: email,
-        password: password, // Cảnh báo: Lưu plaintext không an toàn
-        role: "normal", // Thêm trường role với giá trị mặc định là "normal"
+        email: user.email, // Sử dụng user.email để đảm bảo email chính xác
+        role: "normal",
       });
 
-      // Điều hướng đến màn hình Home sau khi đăng ký thành công
+      // Khởi tạo push notifications và lưu expoPushToken
+      if (newUserId) {
+        await initializePushNotifications(newUserId);
+        console.log("Đã khởi tạo push notifications cho user:", newUserId);
+      }
+
+      // Điều hướng đến màn hình Home
       navigation.replace("Home");
     } catch (error) {
       Alert.alert("Đăng ký thất bại", error.message);
+    } finally {
+      setIsLoading(false); // Tắt trạng thái loading sau khi xử lý xong
     }
   };
 
   return (
     <View style={styles.container}>
+      {/* Hiệu ứng loading */}
+      {isLoading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#000000" />
+          <Text style={styles.loadingText}>Đang đăng ký...</Text>
+        </View>
+      )}
+
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
         <Ionicons name="arrow-back" size={24} color="black" />
       </TouchableOpacity>
@@ -79,6 +99,7 @@ const SignupScreen = ({ navigation }) => {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          editable={!isLoading} // Vô hiệu hóa input khi đang loading
         />
       </View>
       <View style={styles.inputContainer}>
@@ -89,6 +110,7 @@ const SignupScreen = ({ navigation }) => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          editable={!isLoading} // Vô hiệu hóa input khi đang loading
         />
       </View>
       <View style={styles.inputContainer}>
@@ -99,12 +121,17 @@ const SignupScreen = ({ navigation }) => {
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry
+          editable={!isLoading} // Vô hiệu hóa input khi đang loading
         />
       </View>
-      <TouchableOpacity style={styles.button} onPress={handleSignup}>
+      <TouchableOpacity
+        style={[styles.button, isLoading && styles.buttonDisabled]} // Làm mờ nút khi đang loading
+        onPress={handleSignup}
+        disabled={isLoading} // Vô hiệu hóa nút khi đang loading
+      >
         <Text style={styles.buttonText}>Đăng Ký</Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+      <TouchableOpacity onPress={() => navigation.navigate("Login")} disabled={isLoading}>
         <Text style={styles.linkText}>Đã có tài khoản? Đăng nhập</Text>
       </TouchableOpacity>
     </View>
@@ -160,6 +187,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
   },
+  buttonDisabled: {
+    backgroundColor: "#666", // Màu xám khi nút bị vô hiệu hóa
+    opacity: 0.6, // Làm mờ nút khi đang loading
+  },
   buttonText: {
     color: "white",
     fontSize: 18,
@@ -170,5 +201,19 @@ const styles = StyleSheet.create({
     color: "black",
     fontSize: 16,
     fontWeight: "bold",
+  },
+  // Styles cho hiệu ứng loading
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject, // Chiếm toàn bộ màn hình
+    backgroundColor: "rgba(255, 255, 255, 0.8)", // Nền trắng mờ
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000, // Đảm bảo overlay nằm trên cùng
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: "#333",
+    fontWeight: "500",
   },
 });

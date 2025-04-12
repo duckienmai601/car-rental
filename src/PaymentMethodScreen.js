@@ -8,17 +8,17 @@ import {
   StyleSheet,
   Alert,
 } from "react-native";
-import { useNavigation, useRoute } from "@react-navigation/native"; // Đảm bảo import useRoute
-import { Ionicons } from "@expo/vector-icons"; // Để hiển thị biểu tượng
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 
 const PaymentMethodScreen = () => {
   const navigation = useNavigation();
-  const route = useRoute(); // Sử dụng useRoute để lấy params
-  const [selectedMethod, setSelectedMethod] = useState(null); // Trạng thái để theo dõi phương thức thanh toán được chọn
+  const route = useRoute();
+  const [selectedMethod, setSelectedMethod] = useState(null);
 
   const paymentMethods = [
     { id: "cash", name: "Tiền mặt", icon: "cash-outline" },
-    { id: "QR Code", name: "Mã QR", icon: "chatbubble-ellipses-outline" },
+    { id: "qr", name: "Mã QR", icon: "chatbubble-ellipses-outline" },
   ];
 
   const handleSelectMethod = (methodId) => {
@@ -31,30 +31,48 @@ const PaymentMethodScreen = () => {
       return;
     }
 
-    // Lấy tất cả thông tin từ params và thêm paymentMethod
-    const { vehicleId, fromDate, toDate,fromTime,toTime, fullName, address, phone, hasDriver, quantity } = route.params;
+    const { vehicleId, fromDate, toDate, fromTime, toTime, fullName, address, phone, hasDriver, quantity, total } = route.params;
     const paymentMethod = paymentMethods.find((method) => method.id === selectedMethod).name;
 
-    navigation.navigate("ReviewSummary", {
-      vehicleId,
-      fromDate,
-      toDate,
-      fromTime,
-      toTime,
-      fullName,
-      address,
-      phone,
-      hasDriver,
-      quantity,
-      paymentMethod,
-    });
+    if (selectedMethod === "qr") {
+      // Chuyển đến QRPaymentScreen nếu chọn QR Code
+      navigation.navigate("QRPayment", {
+        vehicleId,
+        fromDate,
+        toDate,
+        fromTime,
+        toTime,
+        fullName,
+        address,
+        phone,
+        hasDriver,
+        quantity,
+        paymentMethod,
+        total, // Truyền thêm total
+      });
+    } else {
+      // Chuyển đến ReviewSummaryScreen nếu chọn Tiền mặt
+      navigation.navigate("ReviewSummary", {
+        vehicleId,
+        fromDate,
+        toDate,
+        fromTime,
+        toTime,
+        fullName,
+        address,
+        phone,
+        hasDriver,
+        quantity,
+        paymentMethod,
+        total, // Truyền thêm total (nếu cần ở ReviewSummaryScreen)
+      });
+    }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.innerContainer}>
-          {/* Header với nút Back */}
           <View style={styles.header}>
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <Ionicons name="arrow-back" size={24} color="black" />
@@ -62,10 +80,8 @@ const PaymentMethodScreen = () => {
             <Text style={styles.headerText}>Phương thức thanh toán</Text>
           </View>
 
-          {/* Mô tả */}
           <Text style={styles.description}>Chọn phương thức thanh toán bạn muốn sử dụng.</Text>
 
-          {/* Danh sách phương thức thanh toán */}
           <View style={styles.paymentSection}>
             {paymentMethods.map((method) => (
               <TouchableOpacity
@@ -93,7 +109,6 @@ const PaymentMethodScreen = () => {
           </View>
           <View style={styles.divider} />
 
-          {/* Nút Continue */}
           <TouchableOpacity style={styles.paymentButton} onPress={handleContinue}>
             <Text style={styles.paymentButtonText}>Tiếp tục</Text>
           </TouchableOpacity>
@@ -107,17 +122,15 @@ export default PaymentMethodScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  innerContainer: {
-    paddingHorizontal: 30,
-  },
+  scrollContent: { flexGrow: 1 },
+  innerContainer: { paddingHorizontal: 30 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
-    marginTop: 20,
+    marginTop: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
   },
   headerText: {
     fontSize: 24,
@@ -130,9 +143,7 @@ const styles = StyleSheet.create({
     color: "#555",
     marginBottom: 20,
   },
-  paymentSection: {
-    marginBottom: 20,
-  },
+  paymentSection: { marginBottom: 20 },
   methodItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -147,17 +158,9 @@ const styles = StyleSheet.create({
     borderColor: "#C3002F",
     borderWidth: 1,
   },
-  methodInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  methodIcon: {
-    marginRight: 8,
-  },
-  methodName: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  methodInfo: { flexDirection: "row", alignItems: "center" },
+  methodIcon: { marginRight: 8 },
+  methodName: { fontSize: 16, fontWeight: "bold" },
   radioCircle: {
     width: 24,
     height: 24,
@@ -167,20 +170,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  radioCircleSelected: {
-    borderColor: "#C3002F",
-  },
-  radioDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: "#C3002F",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "black",
-    marginVertical: 20,
-  },
+  radioCircleSelected: { borderColor: "#C3002F" },
+  radioDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: "#C3002F" },
+  divider: { height: 1, backgroundColor: "black", marginVertical: 20 },
   paymentButton: {
     backgroundColor: "black",
     padding: 15,
@@ -188,9 +180,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  paymentButtonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  paymentButtonText: { color: "white", fontSize: 16, fontWeight: "bold" },
 });

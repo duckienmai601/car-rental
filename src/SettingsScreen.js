@@ -16,18 +16,35 @@ const SettingsScreen = () => {
     return unsubscribe;
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Lỗi đăng xuất:", error);
-    }
+  const handleLogout = () => {
+    // Hiển thị thông báo xác nhận
+    Alert.alert(
+      "Xác nhận đăng xuất",
+      "Bạn có muốn đăng xuất không?",
+      [
+        {
+          text: "Không",
+          style: "cancel", // Hủy hành động
+        },
+        {
+          text: "Có",
+          onPress: async () => {
+            try {
+              await signOut(auth);
+              Alert.alert("Thành công", "Bạn đã đăng xuất thành công!");
+            } catch (error) {
+              console.error("Lỗi đăng xuất:", error);
+              Alert.alert("Lỗi", "Không thể đăng xuất. Vui lòng thử lại.");
+            }
+          },
+        },
+      ],
+      { cancelable: false } // Không cho phép nhấn ngoài để thoát Alert
+    );
   };
 
   const menuItems = [
     { icon: "notifications-outline", text: "Thông báo" },
-    { icon: "person-outline", text: "Chỉnh sửa hồ sơ" },
-    { icon: "ellipsis-horizontal-circle-outline", text: "Ngôn ngữ & Khu vực" },
     { icon: "help-circle-outline", text: "Trợ giúp" },
     { icon: "shield-checkmark-outline", text: "Điều khoản & Quyền riêng tư" },
     { icon: "star-outline", text: "Đánh giá ứng dụng" },
@@ -36,10 +53,54 @@ const SettingsScreen = () => {
 
   // Hàm xử lý khi nhấn vào menu item
   const handleMenuItemPress = (itemText) => {
-    if (itemText === "Thông báo") {
-      navigation.navigate("Notify");
-    } else {
-      Alert.alert(itemText);
+    // Kiểm tra xem người dùng đã đăng nhập chưa
+    if (!user) {
+      Alert.alert(
+        "Yêu cầu đăng nhập",
+        "Bạn cần đăng nhập để xem thông tin này",
+        [
+          {
+            text: "ok",
+            style: "cancel",
+          },
+          
+        ],
+        { cancelable: false }
+      );
+      return;
+    }
+
+    // Nếu đã đăng nhập, hiển thị thông tin tương ứng với từng mục
+    switch (itemText) {
+      case "Thông báo":
+        navigation.navigate("Notify");
+        break;
+      case "Trợ giúp":
+        Alert.alert(
+          "Trợ giúp",
+          "Nếu bạn cần hỗ trợ, vui lòng liên hệ với chúng tôi qua:\n- Email: support@rentacar.com\n- Hotline: 1900 1234\n- Thời gian làm việc: 8:00 - 17:00, Thứ 2 - Thứ 7"
+        );
+        break;
+      case "Điều khoản & Quyền riêng tư":
+        Alert.alert(
+          "Điều khoản & Quyền riêng tư",
+          "Chúng tôi cam kết bảo vệ quyền riêng tư của bạn. Vui lòng xem chi tiết tại trang web của chúng tôi."
+        );
+        break;
+      case "Đánh giá ứng dụng":
+        Alert.alert(
+          "Đánh giá ứng dụng",
+          "Cảm ơn bạn đã sử dụng ứng dụng của chúng tôi! Vui lòng đánh giá ứng dụng trên cửa hàng ứng dụng để giúp chúng tôi cải thiện dịch vụ."
+        );
+        break;
+      case "Giới thiệu":
+        Alert.alert(
+          "Giới thiệu",
+          "Chúng tôi là dịch vụ thuê xe hàng đầu, cung cấp các loại xe đa dạng từ xe du lịch, xe gia đình đến xe sang trọng. Với đội ngũ tài xế chuyên nghiệp và dịch vụ hỗ trợ 24/7, chúng tôi cam kết mang đến cho bạn trải nghiệm thuê xe an toàn, tiện lợi và thoải mái nhất. Hãy đồng hành cùng chúng tôi trên mọi hành trình!"
+        );
+        break;
+      default:
+        Alert.alert(itemText, "Chức năng này đang được phát triển.");
     }
   };
 
@@ -76,8 +137,11 @@ const SettingsScreen = () => {
       )}
       <View style={styles.menuContainer}>
         {menuItems.map((item, index) => (
-          <TouchableOpacity key={index} style={styles.menuItem} 
-          onPress={() => handleMenuItemPress(item.text)}>
+          <TouchableOpacity
+            key={index}
+            style={styles.menuItem}
+            onPress={() => handleMenuItemPress(item.text)}
+          >
             <Ionicons name={item.icon} size={24} color="black" style={styles.menuIcon} />
             <Text style={styles.menuText}>{item.text}</Text>
             <Ionicons name="chevron-forward" size={24} color="black" />

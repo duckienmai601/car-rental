@@ -7,17 +7,22 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { db } from "../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection } from "firebase/firestore";
+import Rating from "./Rating"; // Đường dẫn tùy theo bạn lưu file ở đâu
+import * as Notifications from "expo-notifications"; // Import Expo Notifications
 
 const OrderDetailsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { order } = route.params; // Lấy dữ liệu đơn hàng từ params
   const [driver, setDriver] = useState(null); // State để lưu thông tin tài xế
+  const [isRated, setIsRated] = useState(false);
+  const [notificationScheduled, setNotificationScheduled] = useState(false); // State để kiểm soát việc lên lịch thông báo
 
   // Lấy thông tin tài xế từ Firestore dựa trên driverId nếu hasDriver là true
   useEffect(() => {
@@ -39,6 +44,72 @@ const OrderDetailsScreen = () => {
 
     fetchDriver();
   }, [order?.hasDriver, order?.driverId]);
+
+  // Xử lý rating 1 order
+  useEffect(() => {
+    const fetchIsRated = async () => {
+      try {
+        const orderRef = doc(db, "orders", order.id);
+        const orderSnap = await getDoc(orderRef);
+        if (orderSnap.exists()) {
+          const orderData = orderSnap.data();
+          setIsRated(orderData.isRated || false);
+        }
+      } catch (error) {
+        console.error("Lỗi khi kiểm tra trạng thái đánh giá:", error);
+      }
+    };
+
+    fetchIsRated();
+  }, [order.id]);
+
+  // Lên lịch thông báo nhắc nhở trả xe
+  useEffect(() => {
+    const scheduleNotification = async () => {
+      // Kiểm tra nếu thông báo đã được lên lịch thì không làm lại
+      if (notificationScheduled) return;
+
+      try {
+        // Lấy thời gian "Từ ngày" và "Đến ngày" từ order
+        const startDateTime = new Date(`${order.fromDate}T${order.fromTime}:00`);
+        const endDateTime = new Date(`${order.toDate}T${order.toTime}:00`);
+        const currentTime = new Date();
+
+        // Kiểm tra nếu thời gian hiện tại nằm giữa startDateTime và endDateTime
+        if (currentTime >= startDateTime && currentTime <= endDateTime) {
+          const timeDiff = endDateTime - currentTime; // Thời gian còn lại (tính bằng milliseconds)
+          const hoursRemaining = Math.floor(timeDiff / (1000 * 60 * 60)); // Chuyển đổi sang giờ
+          const minutesRemaining = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60)); // Chuyển đổi phần dư sang phút
+
+          // Lên lịch thông báo cục bộ
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Nhắc nhở trả xe",
+              body: `Bạn còn ${hoursRemaining} tiếng ${minutesRemaining} phút để trả xe.`,
+              sound: "default",
+            },
+            trigger: null, // null nghĩa là thông báo sẽ hiển thị ngay lập tức
+          });
+
+          setNotificationScheduled(true); // Đánh dấu thông báo đã được lên lịch
+          console.log("Đã lên lịch thông báo nhắc nhở trả xe.");
+        } else {
+          console.log("Đơn hàng không còn trong thời gian thuê, không gửi thông báo.");
+        }
+      } catch (error) {
+        console.error("Lỗi khi lên lịch thông báo:", error);
+      }
+    };
+
+    if (order?.fromDate && order?.fromTime && order?.toDate && order?.toTime) {
+      scheduleNotification();
+    }
+
+    // Cleanup: Hủy tất cả thông báo khi component unmount (nếu cần)
+    return () => {
+      Notifications.cancelAllScheduledNotificationsAsync();
+    };
+  }, [order?.fromDate, order?.fromTime, order?.toDate, order?.toTime, notificationScheduled]);
 
   const formatDate = (date) => {
     const d = new Date(date);
@@ -97,6 +168,14 @@ const OrderDetailsScreen = () => {
               <Text style={styles.addressLabel}>Số điện thoại:</Text>
               <Text style={styles.addressValue}>{order?.phone || "N/A"}</Text>
             </View>
+            <View style={styles.rentalPeriodRow}>
+              <Text style={styles.rentalPeriodLabel}>Biển số xe:</Text>
+              <Text style={styles.rentalPeriodValue}>
+                {order?.plateNumber
+                  ? Object.keys(order.plateNumber).join(", ")
+                  : "Chưa gán"}
+              </Text>
+            </View>
           </View>
           <View style={styles.divider} />
 
@@ -123,7 +202,7 @@ const OrderDetailsScreen = () => {
           </View>
           <View style={styles.divider} />
 
-                    <View style={styles.driverSection}>
+          <View style={styles.driverSection}>
             <Text style={styles.sectionTitle}>Lựa chọn Tài xế</Text>
             <View style={styles.driverCard}>
               {order?.hasDriver && order?.driverId && driver ? (
@@ -194,6 +273,28 @@ const OrderDetailsScreen = () => {
             </View>
           </View>
           <View style={styles.divider} />
+
+          {order?.status?.trim().toLowerCase() === "hoàn thành" && !isRated && (
+            <View style={{ padding: 16, alignItems: "center" }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold", marginBottom: 10 }}>
+                Đơn hàng đã hoàn thành, Đánh giá trải nghiệm của bạn
+              </Text>
+              <Rating
+                vehicleId={order?.vehicleId}
+                orderId={order?.id}
+                orderStatus={order?.status}
+                onRated={() => setIsRated(true)} // callback khi đánh giá xong
+              />
+            </View>
+          )}
+
+          {order?.status?.trim().toLowerCase() === "hoàn thành" && isRated && (
+            <View style={{ padding: 16, alignItems: "center" }}>
+              <Text style={{ fontSize: 16, fontWeight: "bold", color: "gray" }}>
+                Bạn đã đánh giá đơn hàng này.
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>

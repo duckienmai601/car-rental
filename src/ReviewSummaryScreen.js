@@ -8,20 +8,70 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { db, auth } from "../firebase";
-import { collection, addDoc, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, addDoc, doc, getDoc, getDocs, query, where, runTransaction } from "firebase/firestore";
+import * as FileSystem from "expo-file-system"; // Import expo-file-system để chuyển đổi URI thành Base64
+
+// Hàm gửi thông báo qua Expo Push API
+const sendPushNotification = async (expoPushToken, message) => {
+  if (!expoPushToken) {
+    console.warn("Không có Expo Push Token để gửi thông báo.");
+    return;
+  }
+
+  try {
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: expoPushToken,
+        sound: "default",
+        title: message.title,
+        body: message.body,
+        data: { someData: "goes here" },
+      }),
+    });
+
+    const result = await response.json();
+    if (result.errors) {
+      console.error("Lỗi khi gửi thông báo:", result.errors);
+    } else {
+      console.log("Thông báo đã được gửi:", result);
+    }
+  } catch (error) {
+    console.error("Lỗi khi gửi thông báo:", error);
+  }
+};
+
+// Hàm chuyển đổi URI thành Base64
+const convertUriToBase64 = async (uri) => {
+  try {
+    const base64 = await FileSystem.readAsStringAsync(uri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    return `data:image/jpeg;base64,${base64}`; // Thêm tiền tố để Firestore lưu dạng Base64 hợp lệ
+  } catch (error) {
+    console.error("Lỗi khi chuyển đổi URI thành Base64:", error);
+    throw new Error("Không thể chuyển đổi ảnh thành Base64.");
+  }
+};
 
 const ReviewSummaryScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { vehicleId, fromDate, toDate, fromTime, toTime, fullName, address, phone, hasDriver, quantity, paymentMethod } = route.params;
+  const { vehicleId, fromDate, toDate, fromTime, toTime, fullName, address, phone, hasDriver, quantity, paymentMethod, paymentProofImage } = route.params;
 
   const [vehicle, setVehicle] = useState(null);
   const [userId, setUserId] = useState(null);
   const [driverId, setDriverId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchVehicle = async () => {
@@ -57,11 +107,8 @@ const ReviewSummaryScreen = () => {
             throw new Error("ID người dùng không hợp lệ.");
           }
           setUserId(userData.id);
-        } else {
-          Alert.alert("Lỗi", "Không tìm thấy thông tin user trong hệ thống!");
         }
       } catch (error) {
-        console.error("Error fetching user ID:", error);
         Alert.alert("Lỗi", "Không thể lấy thông tin user. Vui lòng thử lại.");
       }
     };
@@ -99,7 +146,9 @@ const ReviewSummaryScreen = () => {
   if (!vehicle || userId === null) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Đang tải thông tin...</Text>
+        <View style={styles.loadingInfoContainer}>
+          <Text style={styles.errorText}>Đang tải thông tin...</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -123,11 +172,29 @@ const ReviewSummaryScreen = () => {
 
   const pricePerDay = vehicle.price_per_day || 0;
   const subtotal = pricePerDay * numberOfDays * quantity;
-  const driverFee = hasDriver ? 100000 : 0;
+  const driverFee = hasDriver ? 800000 : 0;
   const tax = subtotal * 0.1;
   const total = subtotal + driverFee + tax;
 
+  const getNextOrderId = async () => {
+    try {
+      const ordersSnapshot = await getDocs(collection(db, "orders"));
+      const ids = ordersSnapshot.docs
+        .map((doc) => parseInt(doc.data().orderId || "0"))
+        .filter((id) => !isNaN(id));
+      if (ids.length === 0) {
+        return 1;
+      }
+      const maxId = Math.max(...ids);
+      return maxId + 1;
+    } catch (error) {
+      console.error("Lỗi khi lấy orderId tiếp theo:", error);
+      throw error;
+    }
+  };
+
   const handleContinue = async () => {
+    setIsLoading(true);
     try {
       const user = auth.currentUser;
       if (!user) {
@@ -146,41 +213,131 @@ const ReviewSummaryScreen = () => {
         throw new Error("ID tài xế không hợp lệ.");
       }
 
-      const orderData = {
-        userId: userId,
-        vehicleId,
-        vehicleMake: vehicle.make || "N/A",
-        vehicleModel: vehicle.model || "N/A",
-        image: vehicle.image || "",
-        pricePerDay: vehicle.price_per_day || 0,
-        fromDate,
-        toDate,
-        fromTime,
-        toTime,
-        numberOfDays,
-        fullName,
-        address,
-        phone,
-        hasDriver,
-        driverId: hasDriver ? driverId : null, // Đảm bảo driverId là null nếu không có tài xế
-        quantity,
-        paymentMethod,
-        subtotal,
-        driverFee,
-        tax,
-        total,
-        orderDate: new Date().toISOString(),
-        status: "Chờ xác thực",
-      };
+      const orderId = await getNextOrderId();
+      const allPlates = vehicle.license_plates ? Object.keys(vehicle.license_plates) : [];
 
-      await addDoc(collection(db, "orders"), orderData);
+      // Chuyển đổi paymentProofImage thành Base64 nếu có
+      let paymentProofBase64 = null;
+      if (paymentMethod === "Mã QR" && paymentProofImage) {
+        paymentProofBase64 = await convertUriToBase64(paymentProofImage);
+      }
 
-      navigation.navigate("OrderSuccessful");
+      // Dùng transaction để đảm bảo không trùng biển số và cập nhật số lượng xe khả dụng
+      await runTransaction(db, async (transaction) => {
+        const ordersSnapshot = await getDocs(collection(db, "orders"));
+        const unavailablePlates = new Set();
+
+        // Kiểm tra các đơn hàng khác để tìm biển số đã được sử dụng trong khoảng thời gian trùng lặp
+        ordersSnapshot.docs.forEach((doc) => {
+          const order = doc.data();
+          if (
+            order.vehicleId === vehicleId &&
+            !(new Date(toDate) < new Date(order.fromDate) || new Date(fromDate) > new Date(order.toDate))
+          ) {
+            if (order.plateNumber && typeof order.plateNumber === "object") {
+              Object.keys(order.plateNumber).forEach((plate) => {
+                unavailablePlates.add(plate);
+              });
+            }
+          }
+        });
+
+        const availablePlates = allPlates.filter((plate) => !unavailablePlates.has(plate));
+        if (availablePlates.length < quantity) {
+          throw new Error("Không đủ biển số khả dụng cho đơn hàng này.");
+        }
+
+        const selectedPlates = availablePlates.slice(0, quantity);
+        const selectedPlateObject = {};
+        selectedPlates.forEach((plate) => {
+          selectedPlateObject[plate] = true;
+        });
+
+        const orderData = {
+          userId,
+          vehicleId,
+          vehicleMake: vehicle.make || "N/A",
+          vehicleModel: vehicle.model || "N/A",
+          image: vehicle.image || "",
+          plateNumber: selectedPlateObject,
+          pricePerDay: vehicle.price_per_day || 0,
+          fromDate,
+          toDate,
+          fromTime,
+          toTime,
+          numberOfDays,
+          fullName,
+          address,
+          phone,
+          hasDriver,
+          driverId: hasDriver ? driverId : null,
+          quantity,
+          paymentMethod,
+          paymentProofImage: paymentProofBase64, // Lưu chuỗi Base64
+          subtotal,
+          driverFee,
+          tax,
+          total,
+          orderDate: new Date().toISOString(),
+          status: "Chờ xác thực",
+          orderId: orderId.toString(),
+        };
+
+        // Thêm đơn hàng
+        const orderRef = doc(collection(db, "orders"));
+        transaction.set(orderRef, orderData);
+
+        // Trừ số lượng xe khả dụng
+        const vehicleRef = doc(db, "vehicles", vehicleId);
+        const vehicleSnap = await getDoc(vehicleRef);
+        const currentAvailable = vehicleSnap.exists() ? vehicleSnap.data().available_quantity || 0 : 0;
+        const newAvailable = currentAvailable - selectedPlates.length;
+
+        if (newAvailable < 0) {
+          throw new Error("Không đủ số lượng xe khả dụng.");
+        }
+
+        transaction.update(vehicleRef, { available_quantity: newAvailable });
+      });
+
+      // Gửi thông báo qua Expo Push API
+      const notificationRef = doc(db, "notifications", userId);
+      const notificationSnap = await getDoc(notificationRef);
+      if (notificationSnap.exists() && notificationSnap.data().expoPushToken) {
+        const expoPushToken = notificationSnap.data().expoPushToken;
+        await sendPushNotification(expoPushToken, {
+          title: "Đặt xe thành công!",
+          body: `Đơn hàng của bạn với ${vehicle.make} ${vehicle.model} đã được đặt thành công.`,
+        });
+      } else {
+        console.warn("Không tìm thấy Expo Push Token trong bảng notifications cho user:", userId);
+        Alert.alert(
+          "Thông báo",
+          "Không thể gửi thông báo vì bạn chưa cấp quyền. Vui lòng kiểm tra cài đặt thông báo trong thiết bị."
+        );
+      }
+
+      navigation.navigate("OrderSuccessful", { orderId: orderId.toString() });
     } catch (error) {
-      console.error("Lỗi khi lưu đơn hàng: ", error);
+      console.error("Lỗi khi tạo đơn hàng:", error);
       Alert.alert("Lỗi", error.message || "Không thể lưu đơn hàng. Vui lòng thử lại.");
+    } finally {
+      setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#C3002F" />
+            <Text style={styles.loadingText}>Đang xử lý...</Text>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -288,7 +445,20 @@ const ReviewSummaryScreen = () => {
           </View>
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.paymentButton} onPress={handleContinue}>
+          {/* Hiển thị ảnh xác nhận thanh toán nếu có */}
+          {paymentMethod === "Mã QR" && paymentProofImage && (
+            <View style={styles.paymentProofSection}>
+              <Text style={styles.sectionTitle}>Ảnh xác nhận thanh toán</Text>
+              <Image
+                source={{ uri: paymentProofImage }}
+                style={styles.paymentProofImage}
+                resizeMode="contain"
+              />
+            </View>
+          )}
+          <View style={styles.divider} />
+
+          <TouchableOpacity style={styles.paymentButton} onPress={handleContinue} disabled={isLoading}>
             <Text style={styles.paymentButtonText}>Đặt Xe</Text>
           </TouchableOpacity>
         </View>
@@ -297,17 +467,20 @@ const ReviewSummaryScreen = () => {
   );
 };
 
-export default ReviewSummaryScreen;
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { 
+    flex: 1, 
+    backgroundColor: "#fff",
+  },
   scrollContent: { flexGrow: 1 },
   innerContainer: { paddingHorizontal: 30 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
-    marginTop: 20,
+    marginTop: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
   },
   headerText: {
     fontSize: 24,
@@ -367,8 +540,8 @@ const styles = StyleSheet.create({
   },
   paymentMethodInfo: { flexDirection: "row", alignItems: "center" },
   paymentMethodText: { fontSize: 16, color: "#000", marginLeft: 10 },
-  changeButton: { backgroundColor: "#ddd", paddingVertical: 5, paddingHorizontal: 10, borderRadius: 5 },
-  changeButtonText: { fontSize: 14, color: "#000", fontWeight: "bold" },
+  paymentProofSection: { marginBottom: 20 },
+  paymentProofImage: { width: "100%", height: 200, borderRadius: 10 },
   paymentButton: {
     backgroundColor: "black",
     padding: 15,
@@ -377,5 +550,48 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   paymentButtonText: { color: "white", fontSize: 16, fontWeight: "bold" },
-  errorText: { fontSize: 18, textAlign: "center", color: "red", marginTop: 50 },
+  loadingInfoContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  errorText: { 
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#C3002F",
+    textAlign: "center",
+    fontStyle: "italic",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+  },
+  loadingOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+    height: "100%",
+  },
+  loadingBox: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 15,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+  },
 });
+
+export default ReviewSummaryScreen;

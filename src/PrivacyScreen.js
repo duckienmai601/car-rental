@@ -9,14 +9,15 @@ const PrivacyScreen = ({ route }) => {
 
   return (
     <View style={styles.container}>
-      {/* Nút Back */}
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-        <Ionicons name="arrow-back" size={24} color="black" />
-      </TouchableOpacity>
+      {/* Header chứa nút Back và tiêu đề */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color="black" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Chính Sách Bảo Mật & Điều Khoản Thuê Xe</Text>
+      </View>
 
       <ScrollView style={styles.scrollContainer}>
-        <Text style={styles.title}>Chính Sách Bảo Mật & Điều Khoản Thuê Xe</Text>
-
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>1. Giới Thiệu</Text>
           <Text style={styles.text}>
@@ -90,23 +91,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  scrollContainer: {
-    flexGrow: 1,
+  // Thêm style cho header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+    marginTop: 40, // Khoảng trống nhỏ ở đầu trang
   },
   backButton: {
-    position: "absolute",
-    top: 40,
-    left: 20,
-    zIndex: 10,
+    marginRight: 15, // Khoảng cách giữa nút Back và tiêu đề
   },
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
     color: "#000",
+    flex: 1, // Để tiêu đề chiếm toàn bộ không gian còn lại
+    textAlign: "center",
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 20, // Giảm paddingVertical để tránh khoảng trống quá lớn
   },
   section: {
     backgroundColor: "#fff",

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -19,8 +19,10 @@ import ReviewSummaryScreen from "./src/ReviewSummaryScreen";
 import OrderSuccessfulScreen from "./src/OrderSuccessfulScreen";
 import OrderDetailsScreen from "./src/OrderDetailScreen";
 import NotifyScreen from "./src/NotifyScreen";
-
-
+import initializePushNotifications from "./src/services/PushNotificationController"; // Import PushNotificationController
+import { auth, db } from "./firebase"; // Import Firebase auth và db
+import { collection, query, where, getDocs } from "firebase/firestore"; // Import Firestore functions
+import QRPaymentScreen from "./src/QRPaymentScreen";
 
 const homeIcon_active = require("./src/assets/icons/home-active.png");
 const homeIcon = require("./src/assets/icons/home.png");
@@ -30,7 +32,6 @@ const savedIcon_active = require("./src/assets/icons/saved-active.png");
 const savedIcon = require("./src/assets/icons/saved.png");
 const settingsIcon_active = require("./src/assets/icons/settings-active.png");
 const settingsIcon = require("./src/assets/icons/settings.png");
-
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -73,7 +74,6 @@ function MainTabs() {
       })}
     >
       <Tab.Screen name="Home" component={HomeStack} />
-      <Tab.Screen name="Map" component={MapScreen} />
       <Tab.Screen name="Saved" component={SavedScreen} />
       <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
@@ -81,6 +81,30 @@ function MainTabs() {
 }
 
 export default function App() {
+  // Thêm useEffect để khởi tạo push notifications khi người dùng đăng nhập
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        console.log("Người dùng đã đăng nhập:", user.email);
+        const usersQuery = query(collection(db, "users"), where("email", "==", user.email));
+        const usersSnapshot = await getDocs(usersQuery);
+        if (!usersSnapshot.empty) {
+          const userData = usersSnapshot.docs[0].data();
+          const userId = userData.id;
+          console.log("User ID:", userId);
+          if (userId) {
+            await initializePushNotifications(userId);
+            console.log("Đã khởi tạo push notifications cho user:", userId);
+          }
+        } 
+      } else {
+        console.log("Người dùng chưa đăng nhập.");
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -92,6 +116,7 @@ export default function App() {
         <Stack.Screen name="RentDay" component={RentDayScreen} />
         <Stack.Screen name="Checkout" component={CheckoutScreen} />
         <Stack.Screen name="PaymentMethod" component={PaymentMethodScreen} />
+        <Stack.Screen name="QRPayment" component={QRPaymentScreen} />
         <Stack.Screen name="ReviewSummary" component={ReviewSummaryScreen} />
         <Stack.Screen name="OrderSuccessful" component={OrderSuccessfulScreen} />
         <Stack.Screen name="OrderDetails" component={OrderDetailsScreen} />

@@ -85,24 +85,57 @@ const RentDayScreen = ({ route }) => {
 
   // Kiểm tra thời gian hợp lệ
   const isTimeValid = () => {
-    if (!fromDate || !toDate || !fromTime || !toTime) return false;
-
+    // Kiểm tra các giá trị đầu vào
+    if (!fromDate || !toDate || !fromTime || !toTime) {
+      Alert.alert("Thông báo", "Vui lòng chọn đầy đủ ngày và giờ.");
+      return false;
+    }
+  
+    // Tạo các đối tượng thời gian
     const fromDateTime = new Date(`${fromDate}T${fromTime}:00`);
     const toDateTime = new Date(`${toDate}T${toTime}:00`);
     const now = new Date();
-
-    // Không cho phép thời gian bắt đầu trước hiện tại
+  
+    // Kiểm tra xem các đối tượng Date có hợp lệ không
+    if (isNaN(fromDateTime.getTime()) || isNaN(toDateTime.getTime())) {
+      Alert.alert("Thông báo", "Ngày hoặc giờ không hợp lệ. Vui lòng kiểm tra lại.");
+      return false;
+    }
+  
+    // Kiểm tra thời gian bắt đầu không được trước thời gian hiện tại
     if (fromDateTime < now) {
-      Alert.alert("Lỗi", "Thời gian bắt đầu không thể trước thời điểm hiện tại.");
+      Alert.alert("Thông báo", "Thời gian bắt đầu không thể trước thời điểm hiện tại.");
       return false;
     }
-
-    // Thời gian kết thúc phải sau thời gian bắt đầu
+  
+    // Kiểm tra thời gian bắt đầu phải sau thời gian hiện tại ít nhất 1 tiếng
+    const oneHourLater = new Date(now.getTime() + 1 * 60 * 60 * 1000); // Thời gian hiện tại + 1 tiếng
+    if (fromDateTime < oneHourLater) {
+      Alert.alert(
+        "Thông báo",
+        "Hãy chọn thời gian sau 1 tiếng để bên cửa hàng chuẩn bị xe."
+      );
+      return false;
+    }
+  
+    // Kiểm tra thời gian kết thúc phải sau thời gian bắt đầu
     if (toDateTime <= fromDateTime) {
-      Alert.alert("Lỗi", "Thời gian kết thúc phải sau thời gian bắt đầu.");
+      Alert.alert("Thông báo", "Thời gian kết thúc phải sau thời gian bắt đầu.");
       return false;
     }
-
+  
+    // Kiểm tra thời gian thuê tối đa (ví dụ: tối đa 30 ngày)
+    const timeDiff = toDateTime - fromDateTime;
+    const daysDiff = timeDiff / (1000 * 60 * 60 * 24); // Chuyển đổi sang số ngày
+    const maxRentalDays = 30; // Giới hạn tối đa 30 ngày
+    if (daysDiff > maxRentalDays) {
+      Alert.alert(
+        "Thông báo",
+        `Thời gian thuê không được vượt quá ${maxRentalDays} ngày. Vui lòng chọn lại.`
+      );
+      return false;
+    }
+  
     return true;
   };
 
@@ -137,8 +170,8 @@ const RentDayScreen = ({ route }) => {
               mode="time"
               display="spinner"
               onChange={handleFromTimeChange}
-              textColor="white" 
-              accentColor="white" 
+              textColor="white"
+              accentColor="white"
             />
           )}
         </View>

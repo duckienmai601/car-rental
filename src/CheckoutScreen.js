@@ -49,7 +49,9 @@ const CheckoutScreen = ({ route }) => {
   if (!vehicle) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={styles.errorText}>Đang tải thông tin xe...</Text>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Đang tải thông tin...</Text>
+        </View>
       </SafeAreaView>
     );
   }
@@ -79,7 +81,7 @@ const CheckoutScreen = ({ route }) => {
 
   // Tính toán giá
   const subtotal = pricePerDay * numberOfDays * quantity;
-  const driverFee = hasDriver ? 100000 : 0;
+  const driverFee = hasDriver ? 800000 : 0;
   const tax = subtotal * 0.1;
   const total = subtotal + driverFee + tax;
 
@@ -112,6 +114,7 @@ const CheckoutScreen = ({ route }) => {
       phone,
       hasDriver,
       quantity,
+      total,
     });
   };
 
@@ -255,7 +258,6 @@ const CheckoutScreen = ({ route }) => {
   );
 };
 
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fff" },
   scrollContent: {
@@ -268,7 +270,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
-    marginTop: 20,
+    marginTop: 40, // Thêm khoảng trống nhỏ ở đầu trang, tương tự các màn hình khác
+    borderBottomWidth: 1, // Thêm đường viền dưới để đồng bộ
+    borderBottomColor: "#ddd",
   },
   headerText: {
     fontSize: 24,
@@ -377,7 +381,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
   },
-
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: 20, // Tăng kích thước chữ
+    fontWeight: "600", // Chữ đậm vừa phải
+    color: "#C3002F", // Màu đỏ để đồng bộ với giao diện
+    textAlign: "center", // Căn giữa văn bản
+    fontStyle: "italic", // Chữ nghiêng để tạo điểm nhấn
+  },
   // Error Text
   errorText: { fontSize: 18, textAlign: "center", color: "red", marginTop: 50 },
 });
