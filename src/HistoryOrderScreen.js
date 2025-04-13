@@ -56,31 +56,58 @@ const HistoryOrderScreen = () => {
         setOrders([]);
         return;
       }
-
+  
       setIsLoggedIn(true);
-
+  
       const userId = await fetchUserId();
       if (!userId) {
         setOrders([]);
         return;
       }
-
+  
       const ordersQuery = query(
         collection(db, "orders"),
         where("userId", "==", userId)
       );
-
+  
       const querySnapshot = await getDocs(ordersQuery);
-      const ordersData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const ordersData = [];
+  
+      for (const docSnap of querySnapshot.docs) {
+        const order = { id: docSnap.id, ...docSnap.data() };
+  
+        // Tự động + lại available_quantity nếu status = Hoàn thành và chưa cập nhật
+        if (order?.status?.trim().toLowerCase() != "hoàn thành" && !order.quantityRestored) {
+          const vehicleRef = doc(db, "vehicles", order.vehicleId);
+          await runTransaction(db, async (transaction) => {
+            const vehicleSnap = await transaction.get(vehicleRef);
+            if (!vehicleSnap.exists()) return;
+  
+            const currentAvailable = vehicleSnap.data().available_quantity || 0;
+            transaction.update(vehicleRef, {
+              available_quantity: currentAvailable + (order.quantity || 1),
+            });
+  
+            // Đánh dấu đã cộng rồi
+            const orderRef = doc(db, "orders", order.id);
+            transaction.update(orderRef, {
+              quantityRestored: true,
+            });
+          });
+          // Gán cục bộ để render đúng nút Hủy
+          order.quantityRestored = true;
+        }
+  
+        ordersData.push(order);
+      }
+  
       setOrders(ordersData);
     } catch (error) {
       console.error("Lỗi khi đọc đơn hàng: ", error);
       Alert.alert("Lỗi", error.message || "Không thể tải danh sách đơn hàng. Vui lòng thử lại.");
     }
   };
+  
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -198,19 +225,21 @@ const HistoryOrderScreen = () => {
                 <Text style={styles.status}>{order.status}</Text>
               </View>
               <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => handleCancelOrder(order.id)}
-                >
-                  <Text style={styles.cancelButtonText}>Hủy đơn</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.detailButton}
-                  onPress={() => handleViewDetails(order)}
-                >
-                  <Text style={styles.detailButtonText}>Xem chi tiết</Text>
-                </TouchableOpacity>
-              </View>
+                  {order?.status?.trim().toLowerCase() != "hoàn thành" && (
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={() => handleCancelOrder(orders.id)}
+                    >
+                      <Text style={styles.cancelButtonText}>Hủy đơn</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={styles.detailButton}
+                    onPress={() => handleViewDetails(order)}
+                  >
+                    <Text style={styles.detailButtonText}>Xem chi tiết</Text>
+                  </TouchableOpacity>
+                </View>
             </View>
           ))
         )}

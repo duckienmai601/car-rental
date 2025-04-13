@@ -21,34 +21,8 @@ const OrderDetailsScreen = () => {
   const { order } = route.params; // Lấy dữ liệu đơn hàng từ params
   const [driver, setDriver] = useState(null); // State để lưu thông tin tài xế
   const [isRated, setIsRated] = useState(false);
-  const [vehicle, setVehicle] = useState(null);
-
-  useEffect(() => {
-    const fetchOrder = async () => {
-      const orderRef = doc(db, "orders", orderId); // orderId là id của đơn đang xem
-      const orderSnap = await getDoc(orderRef);
-      if (orderSnap.exists()) {
-        setOrder(orderSnap.data());
-      }
-    };
+  const [notificationScheduled, setNotificationScheduled] = useState(false); // State để kiểm soát việc lên lịch thông báo
   
-    fetchOrder();
-  }, []);
-  
-
-  useEffect(() => {
-    const fetchVehicle = async () => {
-      if (order?.vehicleId) {
-        const docRef = doc(db, "vehicles", order.vehicleId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setVehicle(docSnap.data());
-        }
-      }
-    };
-  
-    fetchVehicle();
-  }, [order]);
   // Lấy thông tin tài xế từ Firestore dựa trên driverId nếu hasDriver là true
   useEffect(() => {
   

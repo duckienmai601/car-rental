@@ -13,6 +13,8 @@ import { db } from "../firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { Alert } from "react-native";
 import Rating from "./Rating";
+import Rating from "./Rating";
+
 // Import biểu tượng tĩnh
 const back = require("./assets/icons/left-arrow.png");
 
