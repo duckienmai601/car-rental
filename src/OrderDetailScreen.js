@@ -260,6 +260,12 @@ const OrderDetailsScreen = () => {
               <Text style={[styles.priceLabel, styles.totalLabel]}>Tổng cộng:</Text>
               <Text style={[styles.priceValue, styles.totalValue]}>{formatNumber(order?.total || 0)}đ</Text>
             </View>
+            {order?.paymentMethod === "Mã QR" && order?.depositAmount && (
+              <View style={styles.priceRow}>
+                <Text style={[styles.priceLabel, styles.depositLabel]}>Cọc trước (20%)</Text>
+                <Text style={[styles.priceValue, styles.depositValue]}>{formatNumber(order.depositAmount)}đ</Text>
+              </View>
+            )}
           </View>
           <View style={styles.divider} />
 
@@ -399,6 +405,8 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 16, color: "black" },
   totalLabel: { fontSize: 18, fontWeight: "bold", color: "#000" },
   totalValue: { fontSize: 18, fontWeight: "bold", color: "#000" },
+  depositLabel: { fontSize: 16, color: "red" }, // Thêm style cho nhãn "Cọc trước"
+  depositValue: { fontSize: 16, color: "red" }, // Thêm style cho giá trị "Cọc trước"
   paymentMethodSection: { marginBottom: 20 },
   paymentMethodRow: {
     flexDirection: "row",
@@ -413,4 +421,3 @@ const styles = StyleSheet.create({
   changeButton: { backgroundColor: "#ddd", paddingVertical: 5, paddingHorizontal: 10, borderRadius: 5 },
   changeButtonText: { fontSize: 14, color: "#000", fontWeight: "bold" },
 });
-

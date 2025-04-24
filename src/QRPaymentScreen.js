@@ -50,13 +50,16 @@ const QRPaymentScreen = () => {
     return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
+  // Tính số tiền cọc trước (20% của total)
+  const depositAmount = total ? Math.round(total * 0.2) : 0;
+
   const handleContinue = () => {
     if (!paymentProofImage) {
       Alert.alert("Thông báo", "Vui lòng tải lên ảnh xác nhận thanh toán!");
       return;
     }
 
-    // Chuyển đến ReviewSummaryScreen và truyền thêm paymentProofImage
+    // Chuyển đến ReviewSummaryScreen và truyền thêm paymentProofImage và depositAmount
     navigation.navigate("ReviewSummary", {
       vehicleId,
       fromDate,
@@ -70,7 +73,8 @@ const QRPaymentScreen = () => {
       quantity,
       paymentMethod,
       paymentProofImage,
-      total, // Truyền thêm total (nếu cần ở ReviewSummaryScreen)
+      total,
+      depositAmount, // Truyền thêm depositAmount
     });
   };
 
@@ -105,17 +109,21 @@ const QRPaymentScreen = () => {
             <Text style={styles.sectionTitle}>Quét mã QR để thanh toán</Text>
             {/* Thêm hình ảnh QR Code tĩnh */}
             <Image
-              source={require("../src/assets/qr.jpg")} // Đảm bảo file qr.jpg đã có trong thư mục assets
+              source={require("../src/assets/qr acb.png")} // Đảm bảo file qr.jpg đã có trong thư mục assets
               style={styles.qrImage}
               resizeMode="contain"
             />
             <View style={styles.qrInfoContainer}>
               <Text style={styles.qrInfo}>Số tài khoản: 123456789</Text>
-              <Text style={styles.qrInfo}>Ngân hàng: Â Châu (ACB)</Text>
-              <Text style={styles.qrInfo}>Chủ tài khoản: Ha Quoc Bao</Text>
+              <Text style={styles.qrInfo}>Ngân hàng: Á Châu (ACB)</Text>
+              <Text style={styles.qrInfo}>Chủ tài khoản: Hà Quốc Bảo</Text>
               <Text style={styles.qrInfo}>Nội dung: Tên-Địa Chỉ-Số điện thoại</Text>
               <Text style={styles.qrInfo}>Số tiền: {formatNumber(total)} VND</Text>
+              <Text style={styles.qrInfo}>Cọc trước: {formatNumber(depositAmount)} VND</Text>
               <Text style={styles.qrNote}>* Nạp tiền xong và sau khi Đặt xe thì đợi ít phút để hệ thống xác thực</Text>
+              <Text style={styles.qrNote}>* Bạn chỉ cần thanh toán bằng số tiền Cọc trước và khi giao xe tới chỉ cần thanh toán số tiền còn lại</Text>
+              <Text style={styles.qrNote}>* Nếu bạn hủy đơn hàng số tiền cọc đó sẽ mất</Text>
+
             </View>
           </View>
           <View style={styles.divider} />

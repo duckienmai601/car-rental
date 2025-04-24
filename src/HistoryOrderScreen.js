@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Alert,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { db, auth } from "../firebase";
@@ -21,6 +22,7 @@ const HistoryOrderScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [isCanceling, setIsCanceling] = useState(false); // Trạng thái loading khi hủy đơn
 
   const fetchUserId = async () => {
     try {
@@ -68,10 +70,36 @@ const HistoryOrderScreen = () => {
       );
 
       const querySnapshot = await getDocs(ordersQuery);
-      const ordersData = querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const ordersData = [];
+
+      for (const docSnap of querySnapshot.docs) {
+        const order = { id: docSnap.id, ...docSnap.data() };
+
+        // Tự động + lại available_quantity nếu status = Hoàn thành và chưa cập nhật
+        if (order?.status?.trim().toLowerCase() === "hoàn thành" && !order.quantityRestored) {
+          const vehicleRef = doc(db, "vehicles", order.vehicleId);
+          await runTransaction(db, async (transaction) => {
+            const vehicleSnap = await transaction.get(vehicleRef);
+            if (!vehicleSnap.exists()) return;
+
+            const currentAvailable = vehicleSnap.data().available_quantity || 0;
+            transaction.update(vehicleRef, {
+              available_quantity: currentAvailable + (order.quantity || 1),
+            });
+
+            // Đánh dấu đã cộng rồi
+            const orderRef = doc(db, "orders", order.id);
+            transaction.update(orderRef, {
+              quantityRestored: true,
+            });
+          });
+          // Gán cục bộ để render đúng nút Hủy
+          order.quantityRestored = true;
+        }
+
+        ordersData.push(order);
+      }
+
       setOrders(ordersData);
     } catch (error) {
       console.error("Lỗi khi đọc đơn hàng: ", error);
@@ -104,60 +132,79 @@ const HistoryOrderScreen = () => {
     navigation.navigate("OrderDetails", { order });
   };
 
-  const handleCancelOrder = (orderId) => {
-    Alert.alert(
-      "Xác nhận hủy đơn",
-      "Bạn có chắc muốn hủy đơn hàng này không?",
-      [
-        {
-          text: "Không",
-          style: "cancel",
-        },
-        {
-          text: "Có",
-          onPress: async () => {
-            try {
-              const orderRef = doc(db, "orders", orderId);
-              const orderSnap = await getDoc(orderRef);
+  const handleCancelOrder = async (orderId) => {
+    try {
+      const orderRef = doc(db, "orders", orderId);
+      const orderSnap = await getDoc(orderRef);
 
-              if (!orderSnap.exists()) {
-                Alert.alert("Lỗi", "Không tìm thấy đơn hàng.");
-                return;
-              }
+      if (!orderSnap.exists()) {
+        Alert.alert("Lỗi", "Không tìm thấy đơn hàng.");
+        return;
+      }
 
-              const orderData = orderSnap.data();
-              const { vehicleId, quantity } = orderData;
+      const orderData = orderSnap.data();
+      const orderDate = new Date(orderData.orderDate); // Lấy thời gian đặt đơn từ Firestore
+      const currentTime = new Date(); // Thời gian hiện tại
+      const timeDiffInMinutes = (currentTime - orderDate) / (1000 * 60); // Chênh lệch thời gian tính bằng phút
 
-              // Cập nhật lại available_quantity
-              const vehicleRef = doc(db, "vehicles", vehicleId);
-              await runTransaction(db, async (transaction) => {
-                const vehicleSnap = await transaction.get(vehicleRef);
+      // Nếu đã quá 20 phút, không cho phép hủy
+      if (timeDiffInMinutes > 20) {
+        Alert.alert("Thông báo", "Hãy liên hệ tổng đài để hủy đơn.");
+        return;
+      }
 
-                if (!vehicleSnap.exists()) {
-                  throw new Error("Không tìm thấy xe để cập nhật số lượng.");
-                }
+      // Nếu chưa quá 20 phút, hiển thị thông báo xác nhận hủy
+      Alert.alert(
+        "Xác nhận hủy đơn",
+        "Bạn có thể hủy đơn trong 20 phút kể từ lúc đặt xe.\nBạn có chắc muốn hủy đơn hàng này không?",
+        [
+          {
+            text: "Không",
+            style: "cancel",
+          },
+          {
+            text: "Có",
+            onPress: async () => {
+              setIsCanceling(true); // Bật trạng thái loading
+              try {
+                const { vehicleId, quantity } = orderData;
 
-                const currentAvailable = vehicleSnap.data().available_quantity || 0;
-                transaction.update(vehicleRef, {
-                  available_quantity: currentAvailable + (quantity || 1),
+                // Cập nhật lại available_quantity
+                const vehicleRef = doc(db, "vehicles", vehicleId);
+                await runTransaction(db, async (transaction) => {
+                  const vehicleSnap = await transaction.get(vehicleRef);
+
+                  if (!vehicleSnap.exists()) {
+                    throw new Error("Không tìm thấy xe để cập nhật số lượng.");
+                  }
+
+                  const currentAvailable = vehicleSnap.data().available_quantity || 0;
+                  transaction.update(vehicleRef, {
+                    available_quantity: currentAvailable + (quantity || 1),
+                  });
+
+                  // Sau khi cộng lại available_quantity -> xóa đơn
+                  transaction.delete(orderRef);
                 });
 
-                // Sau khi cộng lại available_quantity -> xóa đơn
-                transaction.delete(orderRef);
-              });
-
-              // Cập nhật state hiển thị
-              setOrders(orders.filter((order) => order.id !== orderId));
-              Alert.alert("Thành công", "Đơn hàng đã được hủy.");
-            } catch (error) {
-              console.error("Lỗi khi hủy đơn hàng: ", error);
-              Alert.alert("Lỗi", "Không thể hủy đơn hàng. Vui lòng thử lại.");
-            }
+                // Cập nhật state hiển thị
+                setOrders(orders.filter((order) => order.id !== orderId));
+                Alert.alert("Thành công", "Đơn hàng đã được hủy.");
+              } catch (error) {
+                console.error("Lỗi khi hủy đơn hàng: ", error);
+                Alert.alert("Lỗi", "Không thể hủy đơn hàng. Vui lòng thử lại.");
+              } finally {
+                setIsCanceling(false); // Tắt trạng thái loading
+              }
+            },
           },
-        },
-      ],
-      { cancelable: true }
-    );
+        ],
+        { cancelable: true }
+      );
+    } catch (error) {
+      console.error("Lỗi khi kiểm tra đơn hàng: ", error);
+      Alert.alert("Lỗi", "Không thể kiểm tra đơn hàng. Vui lòng thử lại.");
+    }
   };
 
   return (
@@ -195,15 +242,19 @@ const HistoryOrderScreen = () => {
                 <Text style={styles.status}>{order.status}</Text>
               </View>
               <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => handleCancelOrder(order.id)}
-                >
-                  <Text style={styles.cancelButtonText}>Hủy đơn</Text>
-                </TouchableOpacity>
+                {order?.status?.trim().toLowerCase() !== "hoàn thành" && (
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => handleCancelOrder(order.id)}
+                    disabled={isCanceling} // Vô hiệu hóa nút khi đang hủy
+                  >
+                    <Text style={styles.cancelButtonText}>Hủy đơn</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   style={styles.detailButton}
                   onPress={() => handleViewDetails(order)}
+                  disabled={isCanceling} // Vô hiệu hóa nút khi đang hủy
                 >
                   <Text style={styles.detailButtonText}>Xem chi tiết</Text>
                 </TouchableOpacity>
@@ -212,6 +263,16 @@ const HistoryOrderScreen = () => {
           ))
         )}
       </ScrollView>
+
+      {/* Overlay loading khi hủy đơn */}
+      {isCanceling && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#C3002F" />
+            <Text style={styles.loadingText}>Đang xử lý...</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -231,7 +292,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderBottomWidth: 1,
     borderBottomColor: "#E0E0E0",
-    marginTop: 40, // Thêm khoảng trống nhỏ ở đầu trang, tương tự PrivacyScreen và InfoScreen
+    marginTop: 40,
   },
   headerText: {
     fontSize: 28,
@@ -242,7 +303,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 15,
     paddingBottom: 20,
-    paddingTop: 20, // Điều chỉnh paddingTop để cân đối khoảng cách
+    paddingTop: 20,
   },
   emptyText: {
     fontSize: 18,
@@ -320,5 +381,32 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "500",
   },
+  // Styles cho overlay loading
+  loadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingBox: {
+    backgroundColor: "#fff",
+    padding: 20,
+    borderRadius: 15,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  loadingText: {
+    marginTop: 15,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#333",
+  },
 });
-

@@ -44,10 +44,8 @@ const SettingsScreen = () => {
   };
 
   const menuItems = [
-    { icon: "notifications-outline", text: "Thông báo" },
     { icon: "help-circle-outline", text: "Trợ giúp" },
     { icon: "shield-checkmark-outline", text: "Điều khoản & Quyền riêng tư" },
-    { icon: "star-outline", text: "Đánh giá ứng dụng" },
     { icon: "information-circle-outline", text: "Giới thiệu" },
   ];
 

@@ -62,9 +62,7 @@ const PrivacyScreen = ({ route }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>6. Chính Sách Hủy & Hoàn Tiền</Text>
           <Text style={styles.text}>
-            - Hủy trước 48 giờ: hoàn tiền 100%.
-            {'\n'}- Hủy trước 24 giờ: hoàn tiền 50%.
-            {'\n'}- Hủy dưới 24 giờ: không hoàn tiền.
+            - Hủy đơn đặt xe sẽ bị mất tiền cọc và chúng tôi không hoàn lại.
           </Text>
         </View>
 

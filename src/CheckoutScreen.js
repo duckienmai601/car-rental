@@ -81,7 +81,7 @@ const CheckoutScreen = ({ route }) => {
 
   // Tính toán giá
   const subtotal = pricePerDay * numberOfDays * quantity;
-  const driverFee = hasDriver ? 800000 : 0;
+  const driverFee = hasDriver ? 800000 * numberOfDays : 0;
   const tax = subtotal * 0.1;
   const total = subtotal + driverFee + tax;
 

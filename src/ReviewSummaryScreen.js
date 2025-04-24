@@ -66,7 +66,7 @@ const convertUriToBase64 = async (uri) => {
 const ReviewSummaryScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
-  const { vehicleId, fromDate, toDate, fromTime, toTime, fullName, address, phone, hasDriver, quantity, paymentMethod, paymentProofImage } = route.params;
+  const { vehicleId, fromDate, toDate, fromTime, toTime, fullName, address, phone, hasDriver, quantity, paymentMethod, paymentProofImage, depositAmount } = route.params;
 
   const [vehicle, setVehicle] = useState(null);
   const [userId, setUserId] = useState(null);
@@ -121,15 +121,41 @@ const ReviewSummaryScreen = () => {
 
       try {
         const driversSnapshot = await getDocs(collection(db, "taxiDrivers"));
-        const availableDrivers = driversSnapshot.docs
-          .map((doc) => ({ id: doc.id, ...doc.data() }))
-          .filter((driver) => driver.status === "available");
+        const drivers = driversSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-        if (availableDrivers.length > 0) {
-          setDriverId(availableDrivers[0].id);
+        // Tìm tài xế sẵn sàng theo thứ tự
+        let selectedDriver = null;
+        for (const driver of drivers) {
+          if (driver.status === "available") {
+            selectedDriver = driver;
+            break; // Thoát vòng lặp ngay khi tìm thấy tài xế sẵn sàng
+          }
+        }
+
+        if (selectedDriver) {
+          setDriverId(selectedDriver.id);
         } else {
           setDriverId(null);
-          Alert.alert("Cảnh báo", "Hiện tại không có tài xế sẵn sàng. Đơn hàng sẽ được tạo mà không có tài xế.");
+          Alert.alert(
+            "Thông báo",
+            "Hiện tại không có tài xế sẵn sàng.Xin vui lỏng đợi cập nhật lại sau.",
+            [
+              {
+                text: "Quay lại",
+                onPress: () => {
+                  if (paymentMethod === "Mã QR") {
+                    navigation.goBack();
+                    navigation.goBack();
+                    navigation.goBack();
+                  } else {
+                    navigation.goBack();
+                    navigation.goBack();
+                  }
+                },
+              },
+            ],
+            { cancelable: false }
+          );
         }
       } catch (error) {
         console.error("Error fetching driver:", error);
@@ -172,7 +198,7 @@ const ReviewSummaryScreen = () => {
 
   const pricePerDay = vehicle.price_per_day || 0;
   const subtotal = pricePerDay * numberOfDays * quantity;
-  const driverFee = hasDriver ? 800000 : 0;
+  const driverFee = hasDriver ? 800000 * numberOfDays : 0;
   const tax = subtotal * 0.1;
   const total = subtotal + driverFee + tax;
 
@@ -253,6 +279,7 @@ const ReviewSummaryScreen = () => {
           selectedPlateObject[plate] = true;
         });
 
+        // Tạo orderData cơ bản
         const orderData = {
           userId,
           vehicleId,
@@ -273,7 +300,7 @@ const ReviewSummaryScreen = () => {
           driverId: hasDriver ? driverId : null,
           quantity,
           paymentMethod,
-          paymentProofImage: paymentProofBase64, // Lưu chuỗi Base64
+          paymentProofImage: paymentProofBase64, // Lưu chuỗi Base64 nếu có
           subtotal,
           driverFee,
           tax,
@@ -282,6 +309,11 @@ const ReviewSummaryScreen = () => {
           status: "Chờ xác thực",
           orderId: orderId.toString(),
         };
+
+        // Chỉ thêm depositAmount nếu paymentMethod là "Mã QR"
+        if (paymentMethod === "Mã QR" && depositAmount) {
+          orderData.depositAmount = depositAmount;
+        }
 
         // Thêm đơn hàng
         const orderRef = doc(collection(db, "orders"));
@@ -431,6 +463,12 @@ const ReviewSummaryScreen = () => {
               <Text style={[styles.priceLabel, styles.totalLabel]}>Tổng cộng:</Text>
               <Text style={[styles.priceValue, styles.totalValue]}>{formatNumber(total)}đ</Text>
             </View>
+            {paymentMethod === "Mã QR" && depositAmount && (
+              <View style={styles.priceRow}>
+                <Text style={[styles.priceLabel, styles.depositLabel]}>Cọc trước (20%)</Text>
+                <Text style={[styles.priceValue, styles.depositValue]}>{formatNumber(depositAmount)}đ</Text>
+              </View>
+            )}
           </View>
           <View style={styles.divider} />
 
@@ -529,6 +567,8 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 16, color: "black" },
   totalLabel: { fontSize: 18, fontWeight: "bold", color: "#000" },
   totalValue: { fontSize: 18, fontWeight: "bold", color: "#000" },
+  depositLabel: { fontSize: 16, color: "red" }, // Thêm style cho nhãn "Cọc trước"
+  depositValue: { fontSize: 16, color: "red" }, // Thêm style cho giá trị "Cọc trước"
   paymentMethodSection: { marginBottom: 20 },
   paymentMethodRow: {
     flexDirection: "row",

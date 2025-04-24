@@ -42,8 +42,9 @@ const InfoScreen = ({ route, navigation }) => {
   useEffect(() => {
     const fetchVehicle = async () => {
       if (!route.params || !route.params.id) {
-        Alert.alert("Lỗi", "Không tìm thấy ID xe. Vui lòng thử lại.");
-        navigation.goBack();
+        Alert.alert("Lỗi", "Không tìm thấy ID xe. Vui lòng thử lại.", [
+          { text: "OK", onPress: () => navigation.goBack() },
+        ]);
         return;
       }
 
@@ -79,13 +80,15 @@ const InfoScreen = ({ route, navigation }) => {
           setAverageRating(avg); // Cập nhật số sao trung bình
           setUserRatings(userRatingsData); // Lưu thông tin đánh giá
         } else {
-          Alert.alert("Lỗi", "Không tìm thấy thông tin xe.");
-          navigation.goBack();
+          Alert.alert("Lỗi", "Không tìm thấy thông tin xe.", [
+            { text: "OK", onPress: () => navigation.goBack() },
+          ]);
         }
       } catch (error) {
         console.error("Lỗi khi lấy dữ liệu từ Firestore:", error);
-        Alert.alert("Lỗi", "Không thể lấy thông tin xe: " + error.message);
-        navigation.goBack();
+        Alert.alert("Lỗi", "Không thể lấy thông tin xe: " + error.message, [
+          { text: "OK", onPress: () => navigation.goBack() },
+        ]);
       }
     };
 
@@ -190,9 +193,20 @@ const InfoScreen = ({ route, navigation }) => {
             onPress={() => {
               const user = auth.currentUser;
               if (!user) {
-                Alert.alert("Thông Báo", "Bạn phải đăng nhập trước khi thuê xe", [
-                  { text: "OK" },
-                ]);
+                Alert.alert(
+                  "Thông Báo",
+                  "Bạn phải đăng nhập trước khi thuê xe. Bạn có muốn đăng nhập ngay bây giờ không?",
+                  [
+                    {
+                      text: "Không",
+                      style: "cancel",
+                    },
+                    {
+                      text: "Có",
+                      onPress: () => navigation.navigate("Login"), // Điều hướng đến trang đăng nhập
+                    },
+                  ]
+                );
                 return;
               }
               navigation.navigate("Privacy", { vehicleId: vehicle.id });

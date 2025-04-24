@@ -175,14 +175,7 @@ const HomeScreen = ({ navigation }) => {
                 <Text style={styles.greetingText}>Bạn chưa đăng nhập</Text>
               </>
             )}
-            <View style={styles.headerIcons}>
-              <TouchableOpacity
-                style={styles.iconButton}
-                onPress={handleNotificationPress}
-              >
-                <Ionicons name="notifications-outline" size={24} color="black" />
-              </TouchableOpacity>
-            </View>
+            
           </View>
 
           <View style={styles.searchSection}>
