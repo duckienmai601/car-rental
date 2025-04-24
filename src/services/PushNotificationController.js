@@ -50,7 +50,7 @@ const getExpoPushToken = async (userId) => {
 
     // Truyền projectId trực tiếp
     const token = (await Notifications.getExpoPushTokenAsync({
-      projectId: '0dc57c63-65d4-4e97-8b68-7f91a55a0dc5', 
+      projectId: '', 
     })).data;
 
     if (token) {

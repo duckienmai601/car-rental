@@ -7,12 +7,7 @@ import { getFirestore } from "firebase/firestore";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDquQz5HMttKOoPEETOYpQaYa12ex0akcE",
-  authDomain: "rentalcar-ccfb3.firebaseapp.com",
-  projectId: "rentalcar-ccfb3",
-  storageBucket: "rentalcar-ccfb3.firebasestorage.app",
-  messagingSenderId: "974312959588",
-  appId: "1:974312959588:web:68f304db61ead3ca30b971"
+  
 };
 
 // Initialize Firebase
